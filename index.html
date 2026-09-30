@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="AWS DevOps Infrastructure Lab — a cloud engineering portfolio case study covering VPC networking, EC2, Nginx, security groups, and SSH administration.">
+  <meta name="theme-color" content="#08111f">
+  <title>AWS DevOps Infrastructure Lab | Cloud Engineering Portfolio</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <!-- Keyboard users can bypass the navigation and jump to the project content. -->
+  <a class="skip-link" href="#main-content">Skip to content</a>
+
+  <!-- Site header and in-page navigation -->
+  <header class="site-header">
+    <div class="container nav-shell">
+      <a class="brand" href="#top" aria-label="AWS DevOps Infrastructure Lab home">
+        <span class="brand-mark" aria-hidden="true">AD</span>
+        <span class="brand-copy">
+          <strong>Infrastructure Lab</strong>
+          <small>Cloud Engineering Portfolio</small>
+        </span>
+      </a>
+
+      <nav class="site-nav" aria-label="Primary navigation">
+        <a href="#overview">Overview</a>
+        <a href="#architecture">Architecture</a>
+        <a href="#deployment">Deployment</a>
+        <a href="#status">Status</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main-content">
+    <!-- Hero: introduces the project and surfaces core infrastructure facts. -->
+    <section class="hero" id="top" aria-labelledby="hero-title">
+      <div class="hero-grid container">
+        <div class="hero-copy">
+          <div class="eyebrow">
+            <span class="status-dot" aria-hidden="true"></span>
+            Cloud infrastructure case study
+          </div>
+          <h1 id="hero-title">AWS DevOps<br><span>Infrastructure Lab</span></h1>
+          <p class="hero-subtitle">AWS infrastructure deployment using EC2, VPC, Nginx and DevOps practices.</p>
+          <p class="hero-intro">A production-minded lab focused on secure networking, repeatable server provisioning, and dependable application delivery within the AWS Free Tier.</p>
+
+          <div class="hero-actions" aria-label="Project links">
+            <a class="button button-primary" href="#architecture">Explore architecture <span aria-hidden="true">→</span></a>
+            <a class="button button-secondary" href="#details">View technical details</a>
+          </div>
+
+          <dl class="hero-metrics" aria-label="Project highlights">
+            <div>
+              <dt>Region</dt>
+              <dd>us-east-2</dd>
+            </div>
+            <div>
+              <dt>Network</dt>
+              <dd>10.20.0.0/16</dd>
+            </div>
+            <div>
+              <dt>Runtime</dt>
+              <dd>Ubuntu 24.04</dd>
+            </div>
+          </dl>
+        </div>
+
+        <!-- Compact infrastructure console gives the hero a distinctive technical focal point. -->
+        <aside class="infra-console" aria-label="Live infrastructure summary">
+          <div class="console-header">
+            <div class="window-controls" aria-hidden="true"><span></span><span></span><span></span></div>
+            <span>environment / production</span>
+            <span class="console-live"><i aria-hidden="true"></i> healthy</span>
+          </div>
+          <div class="console-body">
+            <div class="console-label">Infrastructure map</div>
+            <div class="mini-map" aria-hidden="true">
+              <div class="mini-node mini-internet"><b>INTERNET</b><small>public traffic</small></div>
+              <div class="mini-route"><span></span><em>0.0.0.0/0</em></div>
+              <div class="mini-vpc">
+                <span class="mini-vpc-label">VPC · 10.20.0.0/16</span>
+                <div class="mini-subnet">
+                  <span>PUBLIC SUBNET · 10.20.1.0/24</span>
+                  <div class="mini-instance">
+                    <b>EC2</b>
+                    <small>Ubuntu + Nginx</small>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <dl class="console-stats">
+              <div><dt>Instance</dt><dd>t3.micro</dd></div>
+              <div><dt>Ingress</dt><dd>80 · 443 · 22</dd></div>
+              <div><dt>Availability</dt><dd><span class="healthy-dot" aria-hidden="true"></span> Online</dd></div>
+            </dl>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- Project overview -->
+    <section class="section overview" id="overview" aria-labelledby="overview-title">
+      <div class="container">
+        <div class="section-heading split-heading">
+          <div>
+            <span class="section-index">01 / Overview</span>
+            <h2 id="overview-title">From network foundation<br>to running application.</h2>
+          </div>
+          <p>The lab follows the same sequence used in real infrastructure work: design the network boundary, provision compute, secure access, deploy the web layer, and verify service health.</p>
+        </div>
+
+        <div class="overview-grid">
+          <article class="feature-card feature-card-wide">
+            <span class="card-number">01</span>
+            <div class="card-icon" aria-hidden="true">AWS</div>
+            <h3>Cloud infrastructure deployment</h3>
+            <p>A purpose-built AWS environment assembled from foundational services with cost-aware choices for Free Tier usage.</p>
+            <span class="card-tag">Foundation</span>
+          </article>
+
+          <article class="feature-card">
+            <span class="card-number">02</span>
+            <div class="card-icon" aria-hidden="true">NET</div>
+            <h3>Network architecture</h3>
+            <p>VPC addressing, public subnet routing, and internet connectivity configured as one controlled network path.</p>
+            <span class="card-tag">Connectivity</span>
+          </article>
+
+          <article class="feature-card">
+            <span class="card-number">03</span>
+            <div class="card-icon" aria-hidden="true">EC2</div>
+            <h3>Server provisioning</h3>
+            <p>A lightweight Ubuntu EC2 instance configured as the application host and administrative target.</p>
+            <span class="card-tag">Compute</span>
+          </article>
+
+          <article class="feature-card">
+            <span class="card-number">04</span>
+            <div class="card-icon" aria-hidden="true">WEB</div>
+            <h3>Nginx deployment</h3>
+            <p>Nginx installed and configured to serve the project through standard web protocols.</p>
+            <span class="card-tag">Web layer</span>
+          </article>
+
+          <article class="feature-card feature-card-wide">
+            <span class="card-number">05</span>
+            <div class="card-icon" aria-hidden="true">SSH</div>
+            <h3>Remote administration</h3>
+            <p>Key-based SSH access supports secure configuration, deployment, and troubleshooting from the command line.</p>
+            <span class="card-tag">Operations</span>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- Architecture diagram built entirely with semantic HTML and CSS. -->
+    <section class="section architecture-section" id="architecture" aria-labelledby="architecture-title">
+      <div class="container">
+        <div class="section-heading centered-heading">
+          <span class="section-index">02 / Architecture</span>
+          <h2 id="architecture-title">A clear path from the internet<br>to the application.</h2>
+          <p>Public traffic enters through the Internet Gateway and is routed into a dedicated public subnet. Security groups limit access before requests reach the EC2-hosted Nginx service.</p>
+        </div>
+
+        <div class="architecture-shell">
+          <div class="architecture-toolbar">
+            <div>
+              <span class="architecture-title">Network topology</span>
+              <span class="architecture-region">AWS · US East (Ohio)</span>
+            </div>
+            <div class="architecture-legend" aria-label="Diagram legend">
+              <span><i class="legend-public" aria-hidden="true"></i> Public</span>
+              <span><i class="legend-secured" aria-hidden="true"></i> Secured</span>
+            </div>
+          </div>
+
+          <ol class="architecture-flow" aria-label="Infrastructure traffic path">
+            <li class="architecture-node node-external">
+              <span class="node-code" aria-hidden="true">WWW</span>
+              <div><strong>Internet</strong><small>Public web traffic</small></div>
+            </li>
+            <li class="flow-connector" aria-hidden="true"><span>HTTPS</span></li>
+            <li class="architecture-node node-gateway">
+              <span class="node-code" aria-hidden="true">IGW</span>
+              <div><strong>Internet Gateway</strong><small>VPC internet connectivity</small></div>
+            </li>
+            <li class="flow-connector" aria-hidden="true"><span>ROUTE</span></li>
+            <li class="network-boundary vpc-boundary">
+              <div class="boundary-label"><span>VPC</span><strong>10.20.0.0/16</strong></div>
+              <div class="network-boundary subnet-boundary">
+                <div class="boundary-label"><span>Public Subnet</span><strong>10.20.1.0/24</strong></div>
+                <div class="compute-stack">
+                  <article class="architecture-node node-ec2">
+                    <span class="node-code" aria-hidden="true">EC2</span>
+                    <div><strong>Ubuntu Server</strong><small>24.04 LTS · t3.micro</small></div>
+                    <span class="node-status"><i aria-hidden="true"></i> Running</span>
+                  </article>
+                  <span class="stack-connector" aria-hidden="true"></span>
+                  <article class="architecture-node node-nginx">
+                    <span class="node-code" aria-hidden="true">NGX</span>
+                    <div><strong>Nginx</strong><small>Web server · ports 80 / 443</small></div>
+                  </article>
+                  <span class="stack-connector" aria-hidden="true"></span>
+                  <article class="architecture-node node-application">
+                    <span class="node-code" aria-hidden="true">APP</span>
+                    <div><strong>Web Application</strong><small>Static portfolio deployment</small></div>
+                  </article>
+                </div>
+              </div>
+            </li>
+          </ol>
+
+          <p class="architecture-note"><strong>Security boundary:</strong> the instance security group permits only the traffic required for web access and controlled administration.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- AWS services and operational tools -->
+    <section class="section services-section" id="services" aria-labelledby="services-title">
+      <div class="container">
+        <div class="section-heading split-heading compact-heading">
+          <div>
+            <span class="section-index">03 / Service stack</span>
+            <h2 id="services-title">Core services.<br>Defined responsibilities.</h2>
+          </div>
+          <p>Each component has a focused role in the environment, keeping the architecture understandable and straightforward to operate.</p>
+        </div>
+
+        <div class="services-grid">
+          <article class="service-card service-featured">
+            <div class="service-top"><span class="service-abbr">EC2</span><span class="service-type">Compute</span></div>
+            <h3>Amazon EC2</h3>
+            <p>Virtual server running Ubuntu Server.</p>
+            <ul><li>t3.micro instance</li><li>Elastic compute capacity</li></ul>
+          </article>
+          <article class="service-card">
+            <div class="service-top"><span class="service-abbr">VPC</span><span class="service-type">Network</span></div>
+            <h3>Amazon VPC</h3>
+            <p>Isolated cloud network environment.</p>
+            <ul><li>Custom CIDR range</li><li>Public subnet routing</li></ul>
+          </article>
+          <article class="service-card">
+            <div class="service-top"><span class="service-abbr">SG</span><span class="service-type">Security</span></div>
+            <h3>Security Groups</h3>
+            <p>Firewall rules controlling inbound and outbound access.</p>
+            <ul><li>Least-privilege access</li><li>Stateful filtering</li></ul>
+          </article>
+          <article class="service-card">
+            <div class="service-top"><span class="service-abbr">NGX</span><span class="service-type">Web</span></div>
+            <h3>Nginx</h3>
+            <p>Web server hosting the application.</p>
+            <ul><li>Static asset delivery</li><li>HTTP / HTTPS ready</li></ul>
+          </article>
+          <article class="service-card">
+            <div class="service-top"><span class="service-abbr">SSH</span><span class="service-type">Operations</span></div>
+            <h3>Secure Shell</h3>
+            <p>Secure remote server administration.</p>
+            <ul><li>Key-based authentication</li><li>Command-line operations</li></ul>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- Deployment pipeline -->
+    <section class="section deployment-section" id="deployment" aria-labelledby="deployment-title">
+      <div class="container">
+        <div class="section-heading centered-heading">
+          <span class="section-index">04 / Deployment</span>
+          <h2 id="deployment-title">A direct, auditable delivery path.</h2>
+          <p>Source changes move from the developer workstation to version control, then onto the EC2 host through an authenticated SSH session.</p>
+        </div>
+
+        <ol class="pipeline" aria-label="Deployment pipeline">
+          <li class="pipeline-step">
+            <span class="pipeline-number">01</span>
+            <span class="pipeline-icon" aria-hidden="true">DEV</span>
+            <div><strong>Developer</strong><small>Build and verify locally</small></div>
+          </li>
+          <li class="pipeline-link" aria-hidden="true"><span>push</span></li>
+          <li class="pipeline-step">
+            <span class="pipeline-number">02</span>
+            <span class="pipeline-icon" aria-hidden="true">GIT</span>
+            <div><strong>GitHub Repository</strong><small>Version-controlled source</small></div>
+          </li>
+          <li class="pipeline-link" aria-hidden="true"><span>deploy</span></li>
+          <li class="pipeline-step">
+            <span class="pipeline-number">03</span>
+            <span class="pipeline-icon" aria-hidden="true">SSH</span>
+            <div><strong>SSH Deployment</strong><small>Authenticated transfer</small></div>
+          </li>
+          <li class="pipeline-link" aria-hidden="true"><span>release</span></li>
+          <li class="pipeline-step">
+            <span class="pipeline-number">04</span>
+            <span class="pipeline-icon" aria-hidden="true">EC2</span>
+            <div><strong>EC2 Server</strong><small>Ubuntu application host</small></div>
+          </li>
+          <li class="pipeline-link" aria-hidden="true"><span>serve</span></li>
+          <li class="pipeline-step pipeline-final">
+            <span class="pipeline-number">05</span>
+            <span class="pipeline-icon" aria-hidden="true">NGX</span>
+            <div><strong>Nginx</strong><small>Public web endpoint</small></div>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- Technical specifications and delivery status -->
+    <section class="section details-section" id="details" aria-labelledby="details-title">
+      <div class="container details-grid">
+        <div class="details-panel">
+          <div class="panel-heading">
+            <span class="section-index">05 / Configuration</span>
+            <h2 id="details-title">Technical details</h2>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <caption class="visually-hidden">Infrastructure configuration details</caption>
+              <tbody>
+                <tr><th scope="row">Region</th><td><code>us-east-2</code><span>Ohio</span></td></tr>
+                <tr><th scope="row">Operating system</th><td>Ubuntu Server 24.04 LTS</td></tr>
+                <tr><th scope="row">Instance type</th><td><code>t3.micro</code></td></tr>
+                <tr><th scope="row">Web server</th><td>Nginx</td></tr>
+                <tr><th scope="row">Protocol</th><td><code>HTTP / HTTPS</code></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <aside class="status-panel" id="status" aria-labelledby="status-title">
+          <div class="status-panel-header">
+            <div>
+              <span class="section-index">06 / Status</span>
+              <h2 id="status-title">Deployment complete</h2>
+            </div>
+            <span class="status-badge"><i aria-hidden="true"></i> Operational</span>
+          </div>
+          <ul class="status-list">
+            <li><span class="check" aria-hidden="true">✓</span><span><strong>VPC configured</strong><small>Network boundary established</small></span></li>
+            <li><span class="check" aria-hidden="true">✓</span><span><strong>EC2 deployed</strong><small>Ubuntu instance provisioned</small></span></li>
+            <li><span class="check" aria-hidden="true">✓</span><span><strong>Security groups configured</strong><small>Required access rules applied</small></span></li>
+            <li><span class="check" aria-hidden="true">✓</span><span><strong>Nginx running</strong><small>Web service active</small></span></li>
+            <li><span class="check" aria-hidden="true">✓</span><span><strong>Web application deployed</strong><small>Portfolio available from the server</small></span></li>
+          </ul>
+          <p class="status-summary"><span>5 / 5</span> infrastructure milestones completed</p>
+        </aside>
+      </div>
+    </section>
+
+    <!-- Closing statement -->
+    <section class="closing-section" aria-label="Project summary">
+      <div class="container closing-content">
+        <span class="closing-kicker">Built to learn. Documented to demonstrate.</span>
+        <h2>Cloud fundamentals translated<br>into working infrastructure.</h2>
+        <p>This lab demonstrates practical experience across networking, compute, Linux administration, security controls, and application delivery.</p>
+        <a href="#top">Back to top <span aria-hidden="true">↑</span></a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-content">
+      <p>AWS DevOps Infrastructure Lab <span>—</span> Cloud Engineering Portfolio</p>
+      <p>Designed for GitHub Pages · No runtime dependencies</p>
+    </div>
+  </footer>
+</body>
+</html>

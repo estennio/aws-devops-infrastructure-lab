@@ -1,0 +1,74 @@
+name: Deploy website to EC2
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "index.html"
+      - "style.css"
+      - ".github/workflows/deploy.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy static site to EC2
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure SSH
+        shell: bash
+        env:
+          EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+          EC2_KNOWN_HOSTS: ${{ secrets.EC2_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+
+          mkdir -p "$HOME/.ssh"
+          chmod 700 "$HOME/.ssh"
+
+          printf '%s\n' "$EC2_SSH_KEY" > "$HOME/.ssh/deploy_key"
+          chmod 600 "$HOME/.ssh/deploy_key"
+
+          printf '%s\n' "$EC2_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 644 "$HOME/.ssh/known_hosts"
+
+      - name: Upload website files
+        shell: bash
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USER }}
+        run: |
+          set -euo pipefail
+
+          scp -i "$HOME/.ssh/deploy_key" \
+            index.html style.css \
+            "$EC2_USER@$EC2_HOST:/tmp/aws-devops-site/"
+
+      - name: Deploy and validate Nginx
+        shell: bash
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USER }}
+        run: |
+          set -euo pipefail
+
+          ssh -i "$HOME/.ssh/deploy_key" "$EC2_USER@$EC2_HOST" <<'REMOTE'
+          set -euo pipefail
+
+          sudo mkdir -p /tmp/aws-devops-site
+          sudo install -m 0644 /tmp/aws-devops-site/index.html /var/www/html/index.html
+          sudo install -m 0644 /tmp/aws-devops-site/style.css /var/www/html/style.css
+
+          sudo nginx -t
+          sudo systemctl reload nginx
+
+          curl -fsS http://127.0.0.1/ > /dev/null
+          echo "Deployment verified successfully."
+          REMOTE

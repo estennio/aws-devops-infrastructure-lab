@@ -47,6 +47,9 @@ jobs:
         run: |
           set -euo pipefail
 
+          ssh -i "$HOME/.ssh/deploy_key" "$EC2_USER@$EC2_HOST" \
+            "mkdir -p /tmp/aws-devops-site"
+
           scp -i "$HOME/.ssh/deploy_key" \
             index.html style.css \
             "$EC2_USER@$EC2_HOST:/tmp/aws-devops-site/"

@@ -14,6 +14,7 @@ The project is intentionally developed in stages. Documentation distinguishes re
 - **Web Server:** Nginx
 - **Administration:** SSH using an EC2 key pair
 - **Web protocol currently verified:** HTTP
+- **Automated deployment:** GitHub Actions via SSH
 
 ## Verified Infrastructure
 
@@ -30,10 +31,11 @@ The project is intentionally developed in stages. Documentation distinguishes re
 | SSH | Verified | Windows PowerShell → EC2 |
 | Nginx | Verified | systemd + local HTTP test |
 | HTTP | Verified | External HTTP 200 response |
+| Automated deployment | Verified | Successful GitHub Actions workflow run and deployment validation |
 
 ### External HTTP verification
 
-From Windows PowerShell, the deployed EC2 public address returned:
+From Windows PowerShell, an external request to the EC2 public IPv4 returned:
 
 ```text
 HTTP/1.1 200 OK
@@ -41,6 +43,16 @@ Server: nginx/1.24.0 (Ubuntu)
 ```
 
 The public IPv4 address used during this test is treated as temporary instance state, not as a permanent project configuration.
+
+## Automated Deployment
+
+The `Deploy website to EC2` GitHub Actions workflow has executed successfully. It deploys `index.html` and `style.css` to the EC2 instance over SSH and validates the website after deployment.
+
+```text
+Git push → GitHub Actions → SSH → EC2 → Nginx → validation
+```
+
+The workflow validation confirmed that the deployed site contains `Deployed automatically with GitHub Actions.`
 
 ## Current Architecture
 
@@ -74,6 +86,9 @@ Web Application
 
 ```text
 .
+├── .github/
+│   └── workflows/
+│       └── deploy.yml
 ├── README.md
 ├── index.html
 ├── style.css
@@ -97,13 +112,11 @@ Web Application
 - [x] SSH access verified
 - [x] Nginx installed and running
 - [x] External HTTP access verified
+- [x] Automated deployment with GitHub Actions verified
 
 ### Next
 
-- [ ] Synchronize portfolio website with the verified AWS state
-- [ ] Implement HTTPS/TLS
-- [ ] Document deployment evidence
-- [ ] Introduce automated deployment with GitHub Actions
+- [ ] Implement and independently verify HTTPS/TLS
 - [ ] Evaluate AWS Systems Manager as an alternative to direct SSH
 - [ ] Add additional infrastructure only when it provides a clear technical benefit
 
@@ -149,6 +162,6 @@ The project avoids adding expensive or unnecessary infrastructure simply to incr
 
 ## Project Status
 
-**Core AWS infrastructure: implemented and verified.**
+**Core AWS infrastructure and automated deployment: implemented and verified.**
 
-The project is now moving from manual infrastructure deployment toward documentation, HTTPS, and automated DevOps workflows.
+The GitHub Actions delivery workflow is verified. HTTPS/TLS remains unimplemented and is the next principal stage.

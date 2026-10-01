@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="AWS DevOps Infrastructure Lab — a verified AWS environment using VPC, EC2, Ubuntu, Nginx, SSH, and HTTP, with HTTPS and CI/CD planned next.">
+  <meta name="description" content="AWS DevOps Infrastructure Lab — a verified AWS environment using VPC, EC2, Ubuntu, Nginx, SSH, HTTP, and automated deployment with GitHub Actions, with HTTPS planned next.">
   <meta name="theme-color" content="#08111f">
   <title>AWS DevOps Infrastructure Lab | Cloud Engineering Portfolio</title>
   <link rel="stylesheet" href="style.css">
@@ -44,7 +44,7 @@
 
           <p class="hero-subtitle">A verified AWS environment using VPC, EC2, Ubuntu, Nginx, SSH, and HTTP.</p>
 
-          <p class="hero-intro">A cost-conscious Cloud/DevOps laboratory built incrementally, with infrastructure verified before documentation is marked complete. HTTPS and automated delivery are the next stages.</p>
+          <p class="hero-intro">A cost-conscious Cloud/DevOps laboratory built incrementally, with infrastructure and automated delivery verified before documentation is marked complete. HTTPS is the next stage.</p>
 
           <div class="hero-actions" aria-label="Project links">
             <a class="button button-primary" href="#architecture">Explore architecture <span aria-hidden="true">→</span></a>
@@ -109,7 +109,7 @@
             <span class="section-index">01 / Overview</span>
             <h2 id="overview-title">From infrastructure<br>to verified delivery.</h2>
           </div>
-          <p>The lab has moved beyond planning: the core AWS network, EC2 host, SSH administration, Nginx service, and external HTTP path have been implemented and tested.</p>
+          <p>The lab has moved beyond planning: the core AWS network, EC2 host, SSH administration, Nginx service, external HTTP path, and automated deployment with GitHub Actions have been implemented and tested.</p>
         </div>
 
         <div class="overview-grid">
@@ -150,6 +150,14 @@
             <div class="card-icon" aria-hidden="true">SSH</div>
             <h3>Remote administration</h3>
             <p>Key-based SSH from Windows PowerShell to Ubuntu has been successfully verified.</p>
+            <span class="card-tag">Verified</span>
+          </article>
+
+          <article class="feature-card">
+            <span class="card-number">06</span>
+            <div class="card-icon" aria-hidden="true">CI</div>
+            <h3>Automated Delivery</h3>
+            <p>GitHub Actions deploys the website files to the EC2 instance via SSH and validates the deployment.</p>
             <span class="card-tag">Verified</span>
           </article>
         </div>
@@ -286,7 +294,7 @@
         <div class="section-heading centered-heading">
           <span class="section-index">04 / Delivery</span>
           <h2 id="deployment-title">An auditable implementation sequence.</h2>
-          <p>The first delivery stage is complete. The remaining stages will be marked complete only after independent verification.</p>
+          <p>The network, compute, web service, and GitHub Actions delivery stages are complete and verified. HTTPS/TLS is the next stage.</p>
         </div>
 
         <ol class="pipeline" aria-label="Deployment pipeline">
@@ -307,17 +315,17 @@
             <span class="pipeline-icon" aria-hidden="true">WEB</span>
             <div><strong>Web service</strong><small>SSH, Nginx, and external HTTP verified</small></div>
           </li>
-          <li class="pipeline-link" aria-hidden="true"><span>next</span></li>
+          <li class="pipeline-link" aria-hidden="true"><span>done</span></li>
           <li class="pipeline-step">
             <span class="pipeline-number">04</span>
-            <span class="pipeline-icon" aria-hidden="true">TLS</span>
-            <div><strong>HTTPS</strong><small>Configure and independently verify TLS</small></div>
+            <span class="pipeline-icon" aria-hidden="true">CI</span>
+            <div><strong>Automation / GitHub Actions</strong><small>Deploy to EC2 via SSH and validate the website</small></div>
           </li>
           <li class="pipeline-link" aria-hidden="true"><span>next</span></li>
           <li class="pipeline-step pipeline-final">
             <span class="pipeline-number">05</span>
-            <span class="pipeline-icon" aria-hidden="true">CI</span>
-            <div><strong>Automation</strong><small>Introduce GitHub Actions for deployment</small></div>
+            <span class="pipeline-icon" aria-hidden="true">TLS</span>
+            <div><strong>HTTPS/TLS</strong><small>Configure and independently verify TLS</small></div>
           </li>
         </ol>
       </div>
@@ -350,7 +358,7 @@
           <div class="status-panel-header">
             <div>
               <span class="section-index">06 / Status</span>
-              <h2 id="status-title">Core infrastructure verified</h2>
+              <h2 id="status-title">Infrastructure and delivery verified</h2>
             </div>
             <span class="status-badge">Implemented</span>
           </div>
@@ -360,10 +368,11 @@
             <li><span class="check" aria-hidden="true">02</span><span><strong>EC2 verified</strong><small>t3.micro · Ubuntu Server 24.04 LTS</small></span></li>
             <li><span class="check" aria-hidden="true">03</span><span><strong>SSH verified</strong><small>Windows PowerShell → EC2</small></span></li>
             <li><span class="check" aria-hidden="true">04</span><span><strong>HTTP verified</strong><small>External request returned HTTP 200 from Nginx</small></span></li>
-            <li><span class="check check-pending" aria-hidden="true">05</span><span><strong>HTTPS pending</strong><small>TLS configuration and validation are next</small></span></li>
+            <li><span class="check" aria-hidden="true">05</span><span><strong>Automated deployment verified</strong><small>GitHub Actions → SSH → EC2 → Nginx → validation</small></span></li>
+            <li><span class="check check-pending" aria-hidden="true">06</span><span><strong>HTTPS pending</strong><small>TLS configuration and validation are next</small></span></li>
           </ul>
 
-          <p class="status-summary"><span>Current state:</span> core AWS infrastructure implemented and verified</p>
+          <p class="status-summary"><span>Current state:</span> core AWS infrastructure and automated deployment implemented and verified</p>
         </aside>
       </div>
     </section>
@@ -372,7 +381,7 @@
       <div class="container closing-content">
         <span class="closing-kicker">Built to learn. Verified to demonstrate.</span>
         <h2>Cloud fundamentals translated<br>into a working environment.</h2>
-        <p>The lab now documents a real AWS deployment and its verification evidence, with HTTPS and automated delivery as the next engineering stages.</p>
+        <p>The lab now documents a real AWS deployment with verified automated delivery through GitHub Actions. HTTPS/TLS is the next engineering stage.</p>
         <a href="#top">Back to top <span aria-hidden="true">↑</span></a>
       </div>
     </section>

@@ -25,15 +25,9 @@ lab-key.pem
 
 The private key was stored locally and was **not** added to the repository.
 
-On Windows, OpenSSH initially rejected the key because its NTFS permissions were too broad. The permissions were restricted to the local administrator account before connecting.
+On Windows, OpenSSH initially rejected the key because its NTFS permissions were too broad. The permissions were restricted before connecting.
 
-The successful connection was:
-
-```powershell
-ssh -i .\lab-key.pem ubuntu@<public-ip>
-```
-
-Successful login confirmed Ubuntu Server 24.04.4 LTS.
+The successful SSH connection was verified from Windows PowerShell.
 
 ## 2. Operating System Verification
 
@@ -99,14 +93,13 @@ Verified response:
 ```text
 HTTP/1.1 200 OK
 Server: nginx/1.24.0 (Ubuntu)
-Content-Type: text/html
 ```
 
 This proves that Nginx is serving HTTP locally.
 
 ## 6. External HTTP Verification
 
-After leaving the SSH session, the test was executed from Windows PowerShell:
+From Windows PowerShell:
 
 ```powershell
 curl.exe -I http://<public-ip>
@@ -117,46 +110,140 @@ Verified response:
 ```text
 HTTP/1.1 200 OK
 Server: nginx/1.24.0 (Ubuntu)
-Content-Type: text/html
 ```
 
 This verifies external HTTP connectivity to the EC2 web server.
 
-## 7. Listening Ports
+## 7. HTTPS / TLS Configuration
 
-Inside the EC2 instance:
+Nginx was configured to listen on TCP/443 using a laboratory certificate for `web.lab.test`.
+
+The active listeners were verified with:
 
 ```bash
-sudo ss -lntp | grep -E ':22|:80|:443'
+sudo ss -lntp | grep -E ':80|:443'
 ```
 
-The verified listeners were:
+The result showed Nginx listening on both TCP/80 and TCP/443.
 
-- TCP 22 — SSH
-- TCP 80 — Nginx HTTP
+Nginx configuration validation:
 
-No HTTPS service was verified during this stage.
+```bash
+sudo nginx -t
+```
 
-## 8. Evidence to Preserve
+Result:
 
-The project should preserve screenshots or terminal captures showing:
+```text
+nginx: the configuration file /etc/nginx/nginx.conf syntax is ok
+nginx: configuration file /etc/nginx/nginx.conf test is successful
+```
 
-- VPC configuration
-- Public subnet configuration
-- Internet Gateway attachment
-- Route table and default route
-- Security Group rules
-- EC2 instance state
-- Successful SSH session
-- Ubuntu version
-- Nginx service status
-- Local HTTP response
-- External HTTP response
-- Browser rendering of the deployed application
+## 8. TLS Certificate Verification
 
-Evidence must be generated from the actual environment. No fabricated screenshots or status claims should be added.
+The certificate was inspected with:
 
-## 9. Current Verification Matrix
+```bash
+openssl x509 -in /etc/nginx/ssl/web.lab.test/web.lab.test.crt -noout -subject -issuer -dates -ext subjectAltName
+```
+
+Verified properties:
+
+```text
+CN = web.lab.test
+DNS:web.lab.test
+notBefore=Oct  1 13:55:19 2026 GMT
+notAfter=Oct  1 13:55:19 2027 GMT
+```
+
+The certificate is self-signed. It is intended for laboratory verification and is not a publicly trusted production certificate.
+
+## 9. TLS 1.3 Verification
+
+TLS negotiation was verified locally with:
+
+```bash
+openssl s_client -connect 127.0.0.1:443 -servername web.lab.test </dev/null 2>/dev/null | grep -E 'Protocol|Cipher|Verify'
+```
+
+Verified result:
+
+```text
+Protocol  : TLSv1.3
+Cipher    : TLS_AES_256_GCM_SHA384
+Verify return code: 18 (self-signed certificate)
+```
+
+The verification code is expected because the certificate is self-signed.
+
+## 10. Local HTTPS Verification
+
+The hostname-aware HTTPS request was tested locally:
+
+```bash
+curl -k -I --resolve web.lab.test:443:127.0.0.1 https://web.lab.test
+```
+
+Verified result:
+
+```text
+HTTP/1.1 200 OK
+Server: nginx/1.24.0 (Ubuntu)
+```
+
+## 11. External HTTPS Verification
+
+From Windows PowerShell:
+
+```powershell
+curl.exe -k -I https://<public-ip>
+```
+
+Verified result:
+
+```text
+HTTP/1.1 200 OK
+Server: nginx/1.24.0 (Ubuntu)
+```
+
+A hostname-aware external test was also performed:
+
+```powershell
+curl.exe -k -I --resolve web.lab.test:443:<public-ip> https://web.lab.test
+```
+
+Verified result:
+
+```text
+HTTP/1.1 200 OK
+Server: nginx/1.24.0 (Ubuntu)
+```
+
+This verifies that the public HTTPS path reaches Nginx and returns the deployed application.
+
+## 12. Automated Deployment
+
+The GitHub Actions workflow `Deploy website to EC2` was successfully executed.
+
+Deployment path:
+
+```text
+Git push
+  ↓
+GitHub Actions
+  ↓
+SSH
+  ↓
+EC2
+  ↓
+Nginx
+  ↓
+Deployment validation
+```
+
+The workflow successfully uploaded `index.html` and `style.css` and validated the deployment.
+
+## 13. Current Verification Matrix
 
 | Component | Status |
 |---|---|
@@ -171,15 +258,42 @@ Evidence must be generated from the actual environment. No fabricated screenshot
 | Nginx | Verified |
 | HTTP local | Verified |
 | HTTP external | Verified |
-| HTTPS | Pending |
-| CI/CD | Pending |
+| HTTPS local | Verified |
+| HTTPS external | Verified |
+| TLS 1.3 | Verified |
+| TLS certificate / SAN | Verified |
+| GitHub Actions | Verified |
+| Automated deployment | Verified |
 | RDS | Not deployed |
 | NAT Gateway | Not deployed |
+| Load Balancer | Not deployed |
+| Auto Scaling | Not deployed |
+| ECS/EKS | Not deployed |
+
+## Evidence to Preserve
+
+The project should preserve screenshots or terminal captures showing:
+
+- VPC configuration
+- Public subnet configuration
+- Internet Gateway attachment
+- Route table and default route
+- Security Group rules
+- EC2 instance state
+- Successful SSH session
+- Ubuntu version
+- Nginx service status
+- HTTP response
+- HTTPS response
+- TLS 1.3 negotiation
+- Certificate subject and SAN
+- GitHub Actions successful deployment
+
+Evidence must be generated from the actual environment. No fabricated screenshots or status claims should be added.
 
 ## Next Implementation Stage
 
-1. Synchronize the portfolio website with the verified infrastructure.
-2. Implement HTTPS/TLS and verify it independently.
-3. Add automated deployment with GitHub Actions.
-4. Evaluate whether AWS Systems Manager should replace direct SSH for administration.
-5. Add further AWS services only when they provide a clear technical objective.
+1. Evaluate AWS Systems Manager as an alternative to direct SSH.
+2. Improve operational security where appropriate.
+3. Add further AWS services only when they provide a clear technical objective.
+4. Consider a publicly trusted certificate/domain only if it adds a meaningful learning objective.

@@ -1,6 +1,6 @@
 # AWS DevOps Infrastructure Lab
 
-A hands-on AWS Cloud/DevOps laboratory focused on networking, Linux administration, web deployment, and progressive automation.
+A hands-on AWS Cloud/DevOps laboratory focused on networking, Linux administration, web deployment, HTTPS/TLS, and progressive automation.
 
 The project is intentionally developed in stages. Documentation distinguishes resources that are **verified in AWS** from components that are still **planned**.
 
@@ -13,7 +13,8 @@ The project is intentionally developed in stages. Documentation distinguishes re
 - **Operating System:** Ubuntu Server 24.04 LTS
 - **Web Server:** Nginx
 - **Administration:** SSH using an EC2 key pair
-- **Web protocol currently verified:** HTTP
+- **Web protocols verified:** HTTP and HTTPS
+- **TLS:** TLS 1.3 with a self-signed certificate for `web.lab.test`
 - **Automated deployment:** GitHub Actions via SSH
 
 ## Verified Infrastructure
@@ -29,8 +30,11 @@ The project is intentionally developed in stages. Documentation distinguishes re
 | EC2 instance | Verified | Running t3.micro |
 | Ubuntu 24.04 LTS | Verified | SSH session |
 | SSH | Verified | Windows PowerShell → EC2 |
-| Nginx | Verified | systemd + local HTTP test |
+| Nginx | Verified | systemd + HTTP/HTTPS tests |
 | HTTP | Verified | External HTTP 200 response |
+| HTTPS | Verified | External HTTPS 200 response |
+| TLS 1.3 | Verified | OpenSSL negotiation |
+| TLS certificate | Verified | CN/SAN `web.lab.test`, self-signed |
 | Automated deployment | Verified | Successful GitHub Actions workflow run and deployment validation |
 
 ### External HTTP verification
@@ -43,6 +47,50 @@ Server: nginx/1.24.0 (Ubuntu)
 ```
 
 The public IPv4 address used during this test is treated as temporary instance state, not as a permanent project configuration.
+
+### External HTTPS verification
+
+From Windows PowerShell, HTTPS was tested against the EC2 public IPv4:
+
+```powershell
+curl.exe -k -I https://<public-ip>
+```
+
+The request returned:
+
+```text
+HTTP/1.1 200 OK
+Server: nginx/1.24.0 (Ubuntu)
+```
+
+The hostname-aware test used the certificate name while resolving it to the EC2 public IPv4:
+
+```powershell
+curl.exe -k -I --resolve web.lab.test:443:<public-ip> https://web.lab.test
+```
+
+This also returned `HTTP/1.1 200 OK`.
+
+## HTTPS / TLS Verification
+
+The EC2 Nginx service is listening on TCP/443 and the configuration passes `nginx -t`.
+
+The deployed certificate was inspected with OpenSSL and verified as:
+
+- Common Name: `web.lab.test`
+- Subject Alternative Name: `DNS:web.lab.test`
+- Validity: 2026-10-01 through 2027-10-01
+- Certificate type: self-signed
+
+TLS negotiation was independently verified with OpenSSL:
+
+```text
+Protocol  : TLSv1.3
+Cipher    : TLS_AES_256_GCM_SHA384
+Verify return code: 18 (self-signed certificate)
+```
+
+The self-signed verification code is expected for this laboratory certificate. It means the certificate is not trusted by the default public trust store; it does not indicate that the TLS connection failed.
 
 ## Automated Deployment
 
@@ -78,6 +126,10 @@ Ubuntu 24.04 LTS
    v
 Nginx
    |
+   +--> HTTP :80
+   |
+   +--> HTTPS :443 / TLS 1.3
+   |
    v
 Web Application
 ```
@@ -112,13 +164,15 @@ Web Application
 - [x] SSH access verified
 - [x] Nginx installed and running
 - [x] External HTTP access verified
+- [x] HTTPS/TLS configured and independently verified
+- [x] TLS 1.3 verified
 - [x] Automated deployment with GitHub Actions verified
 
 ### Next
 
-- [ ] Implement and independently verify HTTPS/TLS
 - [ ] Evaluate AWS Systems Manager as an alternative to direct SSH
 - [ ] Add additional infrastructure only when it provides a clear technical benefit
+- [ ] Consider a publicly trusted certificate/domain only if it adds a meaningful learning objective
 
 ## Intentionally Not Deployed
 
@@ -147,7 +201,9 @@ Never commit:
 
 The repository's `.gitignore` is configured to exclude common private-key and AWS credential files.
 
-SSH is used for the current laboratory stage. The security group should restrict TCP/22 to the administrator's current public IP whenever practical.
+SSH is used for the current laboratory stage. The security group should restrict TCP/22 to the administrator's current public IP whenever practical. The current GitHub Actions deployment requires SSH access from GitHub-hosted runners.
+
+The HTTPS certificate is self-signed and intended for laboratory verification. It is not a publicly trusted production certificate.
 
 ## Cost Strategy
 
@@ -162,6 +218,6 @@ The project avoids adding expensive or unnecessary infrastructure simply to incr
 
 ## Project Status
 
-**Core AWS infrastructure and automated deployment: implemented and verified.**
+**Core AWS infrastructure, HTTPS/TLS, and automated deployment: implemented and verified.**
 
-The GitHub Actions delivery workflow is verified. HTTPS/TLS remains unimplemented and is the next principal stage.
+The current environment demonstrates a working AWS public web deployment with SSH administration, Nginx, TLS 1.3, and GitHub Actions-based delivery. Future work will focus on operational improvements rather than adding infrastructure solely for complexity.

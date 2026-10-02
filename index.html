@@ -44,7 +44,7 @@
 
           <p class="hero-subtitle">A verified AWS environment using VPC, EC2, Ubuntu, Nginx, SSH, and HTTP.</p>
 
-          <p class="hero-intro">A cost-conscious Cloud/DevOps laboratory built incrementally, with infrastructure and automated delivery verified before documentation is marked complete. HTTPS is the next stage.</p>
+          <p class="hero-intro">A cost-conscious Cloud/DevOps laboratory built incrementally, with infrastructure, HTTPS/TLS, and automated delivery verified before documentation is marked complete.</p>
 
           <div class="hero-actions" aria-label="Project links">
             <a class="button button-primary" href="#architecture">Explore architecture <span aria-hidden="true">→</span></a>
@@ -94,7 +94,7 @@
 
             <dl class="console-stats">
               <div><dt>Instance</dt><dd>t3.micro</dd></div>
-              <div><dt>Web</dt><dd>HTTP · port 80</dd></div>
+              <div><dt>Web</dt><dd>HTTP · 80 / HTTPS · 443</dd></div>
               <div><dt>Stage</dt><dd>Verified</dd></div>
             </dl>
           </div>
@@ -109,7 +109,7 @@
             <span class="section-index">01 / Overview</span>
             <h2 id="overview-title">From infrastructure<br>to verified delivery.</h2>
           </div>
-          <p>The lab has moved beyond planning: the core AWS network, EC2 host, SSH administration, Nginx service, external HTTP path, and automated deployment with GitHub Actions have been implemented and tested.</p>
+          <p>The lab has moved beyond planning: the core AWS network, EC2 host, SSH administration, Nginx service, external HTTP/HTTPS paths, TLS 1.3, and automated deployment with GitHub Actions have been implemented and tested.</p>
         </div>
 
         <div class="overview-grid">
@@ -212,7 +212,7 @@
 
                   <article class="architecture-node node-nginx">
                     <span class="node-code" aria-hidden="true">NGX</span>
-                    <div><strong>Nginx</strong><small>HTTP · TCP 80</small></div>
+                    <div><strong>Nginx</strong><small>HTTP 80 · HTTPS 443 · TLS 1.3</small></div>
                     <span class="node-status">Verified</span>
                   </article>
 
@@ -228,7 +228,7 @@
             </li>
           </ol>
 
-          <p class="architecture-note"><strong>Verification boundary:</strong> external Windows PowerShell requests to the EC2 public IPv4 returned <code>HTTP/1.1 200 OK</code> from Nginx. HTTPS is not yet verified.</p>
+          <p class="architecture-note"><strong>Verification boundary:</strong> external Windows PowerShell requests returned <code>HTTP/1.1 200 OK</code> over both HTTP and HTTPS. TLS 1.3 was verified with OpenSSL; the certificate is self-signed for <code>web.lab.test</code>.</p>
         </div>
       </div>
     </section>
@@ -240,7 +240,7 @@
             <span class="section-index">03 / Service stack</span>
             <h2 id="services-title">Implemented services.<br>Defined next steps.</h2>
           </div>
-          <p>The current stack is intentionally small. New AWS services will only be introduced when they add a clear technical objective.</p>
+          <p>The current stack is intentionally small. HTTPS/TLS and automated delivery are now verified; new AWS services will only be introduced when they add a clear technical objective.</p>
         </div>
 
         <div class="services-grid">
@@ -348,7 +348,8 @@
                 <tr><th scope="row">Public subnet</th><td><code>10.20.1.0/24</code><span>Subnet A</span></td></tr>
                 <tr><th scope="row">Compute</th><td><code>t3.micro</code><span>verified</span></td></tr>
                 <tr><th scope="row">Operating system</th><td>Ubuntu Server 24.04 LTS<span>noble</span></td></tr>
-                <tr><th scope="row">Web server</th><td>Nginx<span>HTTP · TCP 80</span></td></tr>
+                <tr><th scope="row">Web server</th><td>Nginx<span>HTTP 80 · HTTPS 443</span></td></tr>
+                <tr><th scope="row">TLS</th><td>TLS 1.3<span>Self-signed certificate · web.lab.test</span></td></tr>
               </tbody>
             </table>
           </div>
@@ -369,10 +370,10 @@
             <li><span class="check" aria-hidden="true">03</span><span><strong>SSH verified</strong><small>Windows PowerShell → EC2</small></span></li>
             <li><span class="check" aria-hidden="true">04</span><span><strong>HTTP verified</strong><small>External request returned HTTP 200 from Nginx</small></span></li>
             <li><span class="check" aria-hidden="true">05</span><span><strong>Automated deployment verified</strong><small>GitHub Actions → SSH → EC2 → Nginx → validation</small></span></li>
-            <li><span class="check check-pending" aria-hidden="true">06</span><span><strong>HTTPS pending</strong><small>TLS configuration and validation are next</small></span></li>
+            <li><span class="check" aria-hidden="true">06</span><span><strong>HTTPS/TLS verified</strong><small>External HTTPS 200 · TLS 1.3 · SAN web.lab.test</small></span></li>
           </ul>
 
-          <p class="status-summary"><span>Current state:</span> core AWS infrastructure and automated deployment implemented and verified</p>
+          <p class="status-summary"><span>Current state:</span> core AWS infrastructure, HTTPS/TLS, and automated deployment implemented and verified</p>
         </aside>
       </div>
     </section>
@@ -381,7 +382,7 @@
       <div class="container closing-content">
         <span class="closing-kicker">Built to learn. Verified to demonstrate.</span>
         <h2>Cloud fundamentals translated<br>into a working environment.</h2>
-        <p>The lab now documents a real AWS deployment with verified automated delivery through GitHub Actions. HTTPS/TLS is the next engineering stage.</p>
+        <p>The lab now documents a real AWS deployment with verified HTTPS/TLS and automated delivery through GitHub Actions.</p>
         <a href="#top">Back to top <span aria-hidden="true">↑</span></a>
       </div>
     </section>

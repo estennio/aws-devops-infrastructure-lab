@@ -1,0 +1,26 @@
+# Fixed laboratory scope. These values already match the defaults.
+aws_region         = "us-east-2"
+vpc_cidr           = "10.20.0.0/16"
+public_subnet_cidr = "10.20.1.0/24"
+instance_type      = "t3.micro"
+
+# Optional. Null selects the first available Availability Zone in us-east-2.
+availability_zone = null
+
+# SSM-only administration is the secure default.
+enable_ssh        = false
+ssh_ingress_cidrs = []
+ec2_key_name      = null
+
+# To enable SSH, set enable_ssh=true, provide one or more explicit trusted
+# CIDRs (never 0.0.0.0/0), and reference an EC2 key pair that already exists.
+
+web_ingress_cidrs = ["0.0.0.0/0"]
+
+enable_bootstrap         = true
+bootstrap_repository_url = "https://github.com/estennio/aws-devops-infrastructure-lab.git"
+bootstrap_repository_ref = "main"
+
+root_volume_size_gib = 8
+
+additional_tags = {}

@@ -147,13 +147,13 @@ Therefore, a successful current run demonstrates that the upload and remote comm
 |---|---|---|
 | Static HTML/CSS site | Implemented | Source files are committed |
 | GitHub Actions SSH deployment | Implemented | Workflow is committed; successful execution is recorded |
-| VPC, subnet, Internet Gateway, route table, Security Group | No implementation files | Deployment and checks are recorded |
-| EC2 and Ubuntu 24.04 LTS | No implementation files | Instance and OS checks are recorded |
+| VPC, subnet, Internet Gateway, route table, Security Group | Terraform proposal committed; not applied or imported | Earlier deployment and checks are recorded separately |
+| EC2, Ubuntu 24.04 LTS, and SSM IAM profile | Terraform proposal committed; not applied or imported | Earlier instance and OS checks are recorded separately; current IAM identifiers remain pending |
 | SSH and Session Manager | No implementation files | Successful access and service state are recorded |
 | Nginx, HTTP, HTTPS, TLS 1.3 | Reproducible configuration proposal committed; not applied by this change | Earlier service, request, listener, and TLS results are recorded separately |
 | RDS, NAT Gateway, Load Balancer, Auto Scaling, ECS/EKS | Not implemented | None claimed |
 | Docker / Docker Compose | Not implemented | None claimed |
-| Terraform / infrastructure-as-code | Not implemented | None claimed |
+| Terraform / infrastructure-as-code | Minimum configuration implemented in `infra/terraform/` | No apply, import, state, or AWS verification claimed |
 
 ## Evidence to preserve in future
 

@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+
+readonly REPOSITORY_URL='${repository_url}'
+readonly REPOSITORY_REF='${repository_ref}'
+readonly INSTALL_DIR='/opt/aws-devops-infrastructure-lab'
+
+export DEBIAN_FRONTEND=noninteractive
+apt-get update
+apt-get install --yes --no-install-recommends git ca-certificates
+
+install -d -o root -g root -m 0755 "$${INSTALL_DIR}"
+
+if [[ ! -d "$${INSTALL_DIR}/.git" ]]; then
+  git -C "$${INSTALL_DIR}" init
+fi
+
+if git -C "$${INSTALL_DIR}" remote get-url origin >/dev/null 2>&1; then
+  git -C "$${INSTALL_DIR}" remote set-url origin "$${REPOSITORY_URL}"
+else
+  git -C "$${INSTALL_DIR}" remote add origin "$${REPOSITORY_URL}"
+fi
+
+git -C "$${INSTALL_DIR}" fetch --depth=1 origin "$${REPOSITORY_REF}"
+git -C "$${INSTALL_DIR}" checkout --detach --force FETCH_HEAD
+bash "$${INSTALL_DIR}/scripts/bootstrap.sh"

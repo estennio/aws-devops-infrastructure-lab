@@ -8,11 +8,11 @@ The repository separates what is inspectable in source code from operational res
 
 | Category | Meaning in this project |
 |---|---|
-| Implemented in the repository | Files that can be inspected here: the static site, GitHub Actions deployment workflow, and a reproducible Nginx server proposal. |
+| Implemented in the repository | Files that can be inspected here: the static site, GitHub Actions workflow, reproducible Nginx proposal, evidence collector, and minimum Terraform configuration. |
 | Recorded verification | Commands and results observed in the AWS/EC2 environment and transcribed in [Deployment and Verification](docs/03-deployment-and-verification.md). Raw screenshots and workflow logs are not stored in this repository. |
 | Planned / not implemented | Ideas with no deployed component or implementation file in the repository. |
 
-Documentation of an AWS result is a record of that verification, not a live check. The repository does not contain Terraform or other infrastructure-as-code from which the AWS environment can be recreated.
+Documentation of an AWS result is a record of that verification, not a live check. The repository now contains Terraform for a new minimum environment, but it has not been applied or reconciled with the existing AWS resources.
 
 ## Repository implementation
 
@@ -25,6 +25,7 @@ Documentation of an AWS result is a record of that verification, not a live chec
 | `scripts/bootstrap.sh` | Idempotent Ubuntu 24.04 bootstrap for Nginx, site files, and a server-generated laboratory certificate. |
 | `scripts/collect-evidence.sh` | Server-side collector for non-sensitive operational evidence with per-check exit statuses. |
 | `evidence/README.md` | Evidence matrix, verified Actions links, collection policy, and external test procedures. |
+| `infra/terraform/` | Minimum VPC, public subnet, routing, Security Group, EC2, and SSM IAM configuration. |
 
 The workflow runs on relevant pushes to `main` or by manual dispatch. It:
 
@@ -85,9 +86,8 @@ The following components are not part of the documented deployment:
 - Load Balancer and Auto Scaling;
 - ECS or EKS;
 - Docker or Docker Compose;
-- Terraform or another infrastructure-as-code implementation.
 
-Ignore rules for Terraform state, variable files, credentials, keys, and certificates are preventive security controls; they do not indicate that Terraform is implemented.
+Terraform is now implemented as versioned configuration, but no apply or import has been performed. State, saved plans, local variable files, credentials, keys, and certificates remain excluded from version control.
 
 ## Security and cost notes
 
@@ -107,6 +107,7 @@ Ignore rules for Terraform state, variable files, credentials, keys, and certifi
 |   `-- 04-server-bootstrap.md
 |-- configs/nginx/web.lab.test.conf
 |-- evidence/README.md
+|-- infra/terraform/
 |-- scripts/
 |   |-- bootstrap.sh
 |   `-- collect-evidence.sh
@@ -118,6 +119,6 @@ Ignore rules for Terraform state, variable files, credentials, keys, and certifi
 
 ## Project status
 
-The repository contains a complete static site, an SSH-based GitHub Actions deployment workflow, and a reproducible proposal for the Ubuntu/Nginx host configuration. AWS networking, EC2, administration, Nginx, HTTP/HTTPS, TLS, and a successful automated deployment are documented as previously verified operational results. The live AWS state was not queried, the proposed server files have not been tested on EC2, and the AWS environment is not reproducible from infrastructure-as-code.
+The repository contains a complete static site, an SSH-based GitHub Actions deployment workflow, a reproducible Ubuntu/Nginx proposal, and Terraform for creating the minimum AWS architecture. AWS networking, EC2, administration, Nginx, HTTP/HTTPS, TLS, and successful automated deployments are documented as previous operational results. The live AWS state was not queried, the Terraform configuration was not applied or imported, and the proposed code is not evidence of current infrastructure state.
 
 Verifiable artifacts and pending collection work are tracked in the [evidence index](evidence/README.md). Documented commands remain procedures until their real, reviewed output is added there.

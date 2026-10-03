@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="AWS DevOps Infrastructure Lab — a verified AWS environment using VPC, EC2, Ubuntu, Nginx, SSH, HTTP, and automated deployment with GitHub Actions, with HTTPS planned next.">
+  <meta name="description" content="AWS DevOps Infrastructure Lab — a verified AWS environment using VPC, EC2, Ubuntu, Nginx, SSH, AWS Systems Manager Session Manager, HTTP, HTTPS/TLS, and automated deployment with GitHub Actions.">
   <meta name="theme-color" content="#08111f">
   <title>AWS DevOps Infrastructure Lab | Cloud Engineering Portfolio</title>
   <link rel="stylesheet" href="style.css">
@@ -42,9 +42,9 @@
 
           <h1 id="hero-title">AWS DevOps<br><span>Infrastructure Lab</span></h1>
 
-          <p class="hero-subtitle">A verified AWS environment using VPC, EC2, Ubuntu, Nginx, SSH, and HTTP.</p>
+          <p class="hero-subtitle">A verified AWS environment using VPC, EC2, Ubuntu, Nginx, SSH, Session Manager, HTTP, and HTTPS/TLS.</p>
 
-          <p class="hero-intro">A cost-conscious Cloud/DevOps laboratory built incrementally, with infrastructure, HTTPS/TLS, and automated delivery verified before documentation is marked complete.</p>
+          <p class="hero-intro">A cost-conscious Cloud/DevOps laboratory built incrementally, with infrastructure, remote administration, HTTPS/TLS, web services, and automated delivery verified before documentation is marked complete.</p>
 
           <div class="hero-actions" aria-label="Project links">
             <a class="button button-primary" href="#architecture">Explore architecture <span aria-hidden="true">→</span></a>
@@ -109,7 +109,7 @@
             <span class="section-index">01 / Overview</span>
             <h2 id="overview-title">From infrastructure<br>to verified delivery.</h2>
           </div>
-          <p>The lab has moved beyond planning: the core AWS network, EC2 host, SSH administration, Nginx service, external HTTP/HTTPS paths, TLS 1.3, and automated deployment with GitHub Actions have been implemented and tested.</p>
+          <p>The lab has moved beyond planning: the core AWS network, EC2 host, SSH and Session Manager administration, Nginx service, external HTTP/HTTPS paths, TLS 1.3, and automated deployment with GitHub Actions have been implemented and verified.</p>
         </div>
 
         <div class="overview-grid">
@@ -148,16 +148,32 @@
           <article class="feature-card">
             <span class="card-number">05</span>
             <div class="card-icon" aria-hidden="true">SSH</div>
-            <h3>Remote administration</h3>
+            <h3>SSH administration</h3>
             <p>Key-based SSH from Windows PowerShell to Ubuntu has been successfully verified.</p>
             <span class="card-tag">Verified</span>
           </article>
 
           <article class="feature-card">
             <span class="card-number">06</span>
+            <div class="card-icon" aria-hidden="true">SSM</div>
+            <h3>AWS Systems Manager</h3>
+            <p>The EC2 instance is an Online managed node, and Session Manager opened an administrative session as <code>ssm-user</code>.</p>
+            <span class="card-tag">Verified</span>
+          </article>
+
+          <article class="feature-card">
+            <span class="card-number">07</span>
             <div class="card-icon" aria-hidden="true">CI</div>
             <h3>Automated Delivery</h3>
             <p>GitHub Actions deploys the website files to the EC2 instance via SSH and validates the deployment.</p>
+            <span class="card-tag">Verified</span>
+          </article>
+
+          <article class="feature-card">
+            <span class="card-number">08</span>
+            <div class="card-icon" aria-hidden="true">TLS</div>
+            <h3>HTTPS/TLS</h3>
+            <p>Encrypted web access is implemented and retained as a verified capability of the laboratory.</p>
             <span class="card-tag">Verified</span>
           </article>
         </div>
@@ -228,7 +244,7 @@
             </li>
           </ol>
 
-          <p class="architecture-note"><strong>Verification boundary:</strong> external Windows PowerShell requests returned <code>HTTP/1.1 200 OK</code> over both HTTP and HTTPS. TLS 1.3 was verified with OpenSSL; the certificate is self-signed for <code>web.lab.test</code>.</p>
+          <p class="architecture-note"><strong>Verification boundary:</strong> external Windows PowerShell requests to the EC2 public IPv4 returned <code>HTTP/1.1 200 OK</code> over both HTTP and HTTPS. TLS 1.3 was verified with OpenSSL; the certificate is self-signed for <code>web.lab.test</code>. Systems Manager reports the instance Online, and Session Manager access was validated as <code>ssm-user</code>.</p>
         </div>
       </div>
     </section>
@@ -238,7 +254,7 @@
         <div class="section-heading split-heading compact-heading">
           <div>
             <span class="section-index">03 / Service stack</span>
-            <h2 id="services-title">Implemented services.<br>Defined next steps.</h2>
+            <h2 id="services-title">Implemented services.<br>Verified capabilities.</h2>
           </div>
           <p>The current stack is intentionally small. HTTPS/TLS and automated delivery are now verified; new AWS services will only be introduced when they add a clear technical objective.</p>
         </div>
@@ -276,14 +292,14 @@
             <div class="service-top"><span class="service-abbr">NGX</span><span class="service-type">Web</span></div>
             <h3>Nginx</h3>
             <p>Active web server serving the current application.</p>
-            <ul><li>TCP 80</li><li>HTTP 200 verified</li></ul>
+            <ul><li>TCP 80 and 443</li><li>Configuration test successful</li></ul>
           </article>
 
           <article class="service-card">
             <div class="service-top"><span class="service-abbr">SSH</span><span class="service-type">Operations</span></div>
             <h3>Secure Shell</h3>
             <p>Verified administration path from Windows to Ubuntu.</p>
-            <ul><li>Key-based access</li><li>SSM remains future option</li></ul>
+            <ul><li>Key-based access</li><li>Remains configured</li></ul>
           </article>
         </div>
       </div>
@@ -294,7 +310,7 @@
         <div class="section-heading centered-heading">
           <span class="section-index">04 / Delivery</span>
           <h2 id="deployment-title">An auditable implementation sequence.</h2>
-          <p>The network, compute, web service, and GitHub Actions delivery stages are complete and verified. HTTPS/TLS is the next stage.</p>
+          <p>The network, compute, remote administration, web service, HTTPS/TLS, and GitHub Actions delivery stages are complete and verified.</p>
         </div>
 
         <ol class="pipeline" aria-label="Deployment pipeline">
@@ -313,7 +329,7 @@
           <li class="pipeline-step">
             <span class="pipeline-number">03</span>
             <span class="pipeline-icon" aria-hidden="true">WEB</span>
-            <div><strong>Web service</strong><small>SSH, Nginx, and external HTTP verified</small></div>
+            <div><strong>Web service</strong><small>SSH, SSM access, Nginx, HTTP, and HTTPS/TLS verified</small></div>
           </li>
           <li class="pipeline-link" aria-hidden="true"><span>done</span></li>
           <li class="pipeline-step">
@@ -321,11 +337,11 @@
             <span class="pipeline-icon" aria-hidden="true">CI</span>
             <div><strong>Automation / GitHub Actions</strong><small>Deploy to EC2 via SSH and validate the website</small></div>
           </li>
-          <li class="pipeline-link" aria-hidden="true"><span>next</span></li>
+          <li class="pipeline-link" aria-hidden="true"><span>done</span></li>
           <li class="pipeline-step pipeline-final">
             <span class="pipeline-number">05</span>
             <span class="pipeline-icon" aria-hidden="true">TLS</span>
-            <div><strong>HTTPS/TLS</strong><small>Configure and independently verify TLS</small></div>
+            <div><strong>HTTPS/TLS</strong><small>Implemented and verified</small></div>
           </li>
         </ol>
       </div>
@@ -346,10 +362,12 @@
                 <tr><th scope="row">Region</th><td><code>us-east-2</code><span>Ohio</span></td></tr>
                 <tr><th scope="row">VPC</th><td><code>10.20.0.0/16</code></td></tr>
                 <tr><th scope="row">Public subnet</th><td><code>10.20.1.0/24</code><span>Subnet A</span></td></tr>
-                <tr><th scope="row">Compute</th><td><code>t3.micro</code><span>verified</span></td></tr>
+                <tr><th scope="row">Compute</th><td><code>lab-web-server</code><span>i-08f84a35805b6b66d · t3.micro</span></td></tr>
                 <tr><th scope="row">Operating system</th><td>Ubuntu Server 24.04 LTS<span>noble</span></td></tr>
-                <tr><th scope="row">Web server</th><td>Nginx<span>HTTP 80 · HTTPS 443</span></td></tr>
-                <tr><th scope="row">TLS</th><td>TLS 1.3<span>Self-signed certificate · web.lab.test</span></td></tr>
+                <tr><th scope="row">Administration</th><td>Session Manager and SSH<span>both verified</span></td></tr>
+                <tr><th scope="row">Systems Manager</th><td>Managed node<span>Online · SSM Agent running</span></td></tr>
+                <tr><th scope="row">Web server</th><td>Nginx<span>active · TCP 80/443</span></td></tr>
+                <tr><th scope="row">TLS</th><td>TLS 1.3<span>Self-signed certificate · CN/SAN web.lab.test</span></td></tr>
               </tbody>
             </table>
           </div>
@@ -368,12 +386,13 @@
             <li><span class="check" aria-hidden="true">01</span><span><strong>Network deployed</strong><small>VPC, public subnet, IGW, route table, and Security Group</small></span></li>
             <li><span class="check" aria-hidden="true">02</span><span><strong>EC2 verified</strong><small>t3.micro · Ubuntu Server 24.04 LTS</small></span></li>
             <li><span class="check" aria-hidden="true">03</span><span><strong>SSH verified</strong><small>Windows PowerShell → EC2</small></span></li>
-            <li><span class="check" aria-hidden="true">04</span><span><strong>HTTP verified</strong><small>External request returned HTTP 200 from Nginx</small></span></li>
-            <li><span class="check" aria-hidden="true">05</span><span><strong>Automated deployment verified</strong><small>GitHub Actions → SSH → EC2 → Nginx → validation</small></span></li>
-            <li><span class="check" aria-hidden="true">06</span><span><strong>HTTPS/TLS verified</strong><small>External HTTPS 200 · TLS 1.3 · SAN web.lab.test</small></span></li>
+            <li><span class="check" aria-hidden="true">04</span><span><strong>Session Manager verified</strong><small>Online managed node · session opened as ssm-user</small></span></li>
+            <li><span class="check" aria-hidden="true">05</span><span><strong>Nginx verified through SSM</strong><small>Configuration successful · service active · TCP 80/443 listening</small></span></li>
+            <li><span class="check" aria-hidden="true">06</span><span><strong>HTTP and HTTPS/TLS verified</strong><small>External HTTP/HTTPS 200 · TLS 1.3 · SAN web.lab.test</small></span></li>
+            <li><span class="check" aria-hidden="true">07</span><span><strong>Automated deployment verified</strong><small>GitHub Actions → SSH → EC2 → Nginx → validation</small></span></li>
           </ul>
 
-          <p class="status-summary"><span>Current state:</span> core AWS infrastructure, HTTPS/TLS, and automated deployment implemented and verified</p>
+          <p class="status-summary"><span>Current state:</span> core AWS infrastructure, remote administration, web protocols, and automated deployment implemented and verified</p>
         </aside>
       </div>
     </section>
@@ -382,7 +401,7 @@
       <div class="container closing-content">
         <span class="closing-kicker">Built to learn. Verified to demonstrate.</span>
         <h2>Cloud fundamentals translated<br>into a working environment.</h2>
-        <p>The lab now documents a real AWS deployment with verified HTTPS/TLS and automated delivery through GitHub Actions.</p>
+        <p>The lab documents a real AWS deployment with verified SSH and Session Manager administration, Nginx service health, HTTP and HTTPS/TLS, and automated delivery through GitHub Actions.</p>
         <a href="#top">Back to top <span aria-hidden="true">↑</span></a>
       </div>
     </section>

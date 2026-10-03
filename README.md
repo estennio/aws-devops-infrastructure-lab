@@ -9,11 +9,11 @@ The project is intentionally developed in stages. Documentation distinguishes re
 - **AWS Region:** us-east-2 (US East - Ohio)
 - **VPC CIDR:** 10.20.0.0/16
 - **Public Subnet A:** 10.20.1.0/24
-- **EC2:** t3.micro
+- **EC2:** `lab-web-server` (`i-08f84a35805b6b66d`) — t3.micro
 - **Operating System:** Ubuntu Server 24.04 LTS
 - **Web Server:** Nginx
-- **Administration:** SSH using an EC2 key pair
-- **Web protocols verified:** HTTP and HTTPS
+- **Administration:** AWS Systems Manager Session Manager and SSH using an EC2 key pair
+- **Web protocols verified:** HTTP and HTTPS/TLS
 - **TLS:** TLS 1.3 with a self-signed certificate for `web.lab.test`
 - **Automated deployment:** GitHub Actions via SSH
 
@@ -27,15 +27,44 @@ The project is intentionally developed in stages. Documentation distinguishes re
 | Internet Gateway | Verified | Attached to the VPC |
 | Public Route Table | Verified | 0.0.0.0/0 route to IGW |
 | Security Group | Verified | EC2 access rules |
-| EC2 instance | Verified | Running t3.micro |
+| EC2 instance | Verified | `lab-web-server` (`i-08f84a35805b6b66d`), running t3.micro |
 | Ubuntu 24.04 LTS | Verified | SSH session |
 | SSH | Verified | Windows PowerShell → EC2 |
-| Nginx | Verified | systemd + HTTP/HTTPS tests |
+| AWS Systems Manager | Verified | Instance recognized as a managed node; SSM Agent running; ping status Online |
+| Session Manager | Verified | Administrative session opened successfully as `ssm-user` |
+| Nginx | Verified | `nginx -t` successful; systemd state active; HTTP/HTTPS tests successful |
+| Nginx listeners | Verified | TCP 80 and 443 listening on IPv4 and IPv6 |
 | HTTP | Verified | External HTTP 200 response |
 | HTTPS | Verified | External HTTPS 200 response |
 | TLS 1.3 | Verified | OpenSSL negotiation |
 | TLS certificate | Verified | CN/SAN `web.lab.test`, self-signed |
 | Automated deployment | Verified | Successful GitHub Actions workflow run and deployment validation |
+
+### Systems Manager / Session Manager verification
+
+AWS Systems Manager recognizes `lab-web-server` (`i-08f84a35805b6b66d`) as a managed node. The SSM Agent is running, the Systems Manager ping status is `Online`, and Session Manager successfully opened an administrative session on the instance as `ssm-user`.
+
+The following Nginx checks were run inside that Session Manager session:
+
+```text
+$ sudo nginx -t
+syntax is ok
+test is successful
+
+$ sudo systemctl is-active nginx
+active
+```
+
+The session also confirmed these listening sockets:
+
+```text
+0.0.0.0:80 LISTEN
+0.0.0.0:443 LISTEN
+[::]:80 LISTEN
+[::]:443 LISTEN
+```
+
+This validates Session Manager as an operational remote-administration path while preserving the existing, verified SSH configuration.
 
 ### External HTTP verification
 
@@ -162,6 +191,8 @@ Web Application
 - [x] EC2 t3.micro deployed
 - [x] Ubuntu Server 24.04 LTS running
 - [x] SSH access verified
+- [x] AWS Systems Manager managed-node status verified
+- [x] Session Manager administrative access verified
 - [x] Nginx installed and running
 - [x] External HTTP access verified
 - [x] HTTPS/TLS configured and independently verified
@@ -170,9 +201,9 @@ Web Application
 
 ### Next
 
-- [ ] Evaluate AWS Systems Manager as an alternative to direct SSH
 - [ ] Add additional infrastructure only when it provides a clear technical benefit
 - [ ] Consider a publicly trusted certificate/domain only if it adds a meaningful learning objective
+- [ ] Continue documenting new validation evidence as the laboratory evolves
 
 ## Intentionally Not Deployed
 
@@ -201,7 +232,7 @@ Never commit:
 
 The repository's `.gitignore` is configured to exclude common private-key and AWS credential files.
 
-SSH is used for the current laboratory stage. The security group should restrict TCP/22 to the administrator's current public IP whenever practical. The current GitHub Actions deployment requires SSH access from GitHub-hosted runners.
+Both Session Manager and SSH are verified administrative paths for the current laboratory stage. SSH remains configured; the security group should restrict TCP/22 to the administrator's current public IP whenever practical. The current GitHub Actions deployment requires SSH access from GitHub-hosted runners.
 
 The HTTPS certificate is self-signed and intended for laboratory verification. It is not a publicly trusted production certificate.
 
@@ -218,6 +249,6 @@ The project avoids adding expensive or unnecessary infrastructure simply to incr
 
 ## Project Status
 
-**Core AWS infrastructure, HTTPS/TLS, and automated deployment: implemented and verified.**
+**Core AWS infrastructure, remote administration, HTTPS/TLS, and automated deployment: implemented and verified.**
 
-The current environment demonstrates a working AWS public web deployment with SSH administration, Nginx, TLS 1.3, and GitHub Actions-based delivery. Future work will focus on operational improvements rather than adding infrastructure solely for complexity.
+The current environment demonstrates a working AWS public web deployment with verified SSH and Session Manager administration, Nginx, TLS 1.3, and GitHub Actions-based delivery. AWS Systems Manager recognizes the EC2 instance as an online managed node, and Nginx configuration, service state, and listeners on TCP 80 and 443 were verified from the SSM session. Future work will focus on operational improvements rather than adding infrastructure solely for complexity.

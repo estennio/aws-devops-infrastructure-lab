@@ -43,6 +43,7 @@ The public IPv4 used for testing is not recorded as permanent configuration beca
 | Nginx, HTTP, HTTPS, TLS 1.3 | Recorded as operational | Transcribed service, listener, request, and OpenSSL results |
 | Static website | Implemented in the repository | `index.html` and `style.css` |
 | GitHub Actions delivery | Implemented in the repository; successful execution recorded | `.github/workflows/deploy.yml` and the verification record |
+| Ubuntu/Nginx bootstrap | Reproducible proposal; not verified on EC2 | `scripts/bootstrap.sh` and `configs/nginx/web.lab.test.conf` |
 
 Raw AWS exports, screenshots, terminal captures, and workflow logs are not committed. Consequently, the recorded environment cannot be independently reconstructed or confirmed as currently running from repository contents alone.
 
@@ -68,7 +69,7 @@ The documented application paths use:
 - TCP 80 for HTTP;
 - TCP 443 for HTTPS/TLS.
 
-The repository does not include Security Group rules, IAM policies, Nginx configuration, certificates, private keys, or GitHub Actions secret values. The self-signed certificate is a lab artifact and is not publicly trusted.
+The repository does not include Security Group rules, IAM policies, generated certificates, private keys, or GitHub Actions secret values. It now includes a proposed Nginx configuration and bootstrap, documented in [Reproducible Nginx Server Proposal](04-server-bootstrap.md); these files are not asserted to match the active EC2 configuration. The self-signed certificate is a lab artifact and is not publicly trusted.
 
 ## Planned / not implemented
 

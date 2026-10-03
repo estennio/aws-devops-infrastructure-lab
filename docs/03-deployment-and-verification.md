@@ -4,7 +4,7 @@
 
 This document is the repository's text record of checks performed during the lab. The commands and outputs below were previously transcribed from AWS, EC2, Windows PowerShell, and GitHub Actions activity; they are not rerun automatically when this document changes.
 
-No screenshots, terminal capture files, AWS inventory exports, or GitHub Actions logs are committed. Treat these entries as recorded operational evidence, while treating `index.html`, `style.css`, and `.github/workflows/deploy.yml` as the implementation directly inspectable in the repository.
+No screenshots, terminal capture files, AWS inventory exports, or GitHub Actions logs are committed. Treat these entries as recorded operational evidence. The static site, deployment workflow, and [proposed server bootstrap](04-server-bootstrap.md) are implementation directly inspectable in the repository; the proposal has not been tested on EC2.
 
 ## Recorded environment
 
@@ -150,7 +150,7 @@ Therefore, a successful current run demonstrates that the upload and remote comm
 | VPC, subnet, Internet Gateway, route table, Security Group | No implementation files | Deployment and checks are recorded |
 | EC2 and Ubuntu 24.04 LTS | No implementation files | Instance and OS checks are recorded |
 | SSH and Session Manager | No implementation files | Successful access and service state are recorded |
-| Nginx, HTTP, HTTPS, TLS 1.3 | No server configuration committed | Service, request, listener, and TLS results are recorded |
+| Nginx, HTTP, HTTPS, TLS 1.3 | Reproducible configuration proposal committed; not applied by this change | Earlier service, request, listener, and TLS results are recorded separately |
 | RDS, NAT Gateway, Load Balancer, Auto Scaling, ECS/EKS | Not implemented | None claimed |
 | Docker / Docker Compose | Not implemented | None claimed |
 | Terraform / infrastructure-as-code | Not implemented | None claimed |

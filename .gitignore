@@ -57,6 +57,9 @@ override.tf.json
 
 # Terraform plan files
 *.tfplan
+*.plan
+plan.out
+tfplan
 
 # Terraform CLI configuration
 .terraformrc

@@ -2,7 +2,7 @@
 
 ## Documentation boundary
 
-This document describes the AWS topology recorded during lab verification. It is not generated from a live AWS inventory, and the repository contains no infrastructure-as-code definition for these resources.
+This document describes the AWS topology recorded during lab verification. It is not generated from a live AWS inventory. The repository now includes a minimum Terraform definition, but that code has not been applied, imported, or reconciled with the recorded environment.
 
 Use the following labels consistently:
 
@@ -44,6 +44,7 @@ The public IPv4 used for testing is not recorded as permanent configuration beca
 | Static website | Implemented in the repository | `index.html` and `style.css` |
 | GitHub Actions delivery | Implemented in the repository; successful execution recorded | `.github/workflows/deploy.yml` and the verification record |
 | Ubuntu/Nginx bootstrap | Reproducible proposal; not verified on EC2 | `scripts/bootstrap.sh` and `configs/nginx/web.lab.test.conf` |
+| Minimum AWS infrastructure | Terraform configuration present; not applied or imported | `infra/terraform/` |
 
 Raw AWS exports, screenshots, terminal captures, and workflow logs are not committed. Consequently, the recorded environment cannot be independently reconstructed or confirmed as currently running from repository contents alone.
 
@@ -84,4 +85,4 @@ The following are future options only:
 
 A possible private database design could use private subnets, disabled public access, and TCP 5432 allowed only from the application tier. No database is recorded as deployed.
 
-Docker and Terraform are also not implemented. There is no `Dockerfile`, Compose file, `.tf` configuration, module, or Terraform state in the repository. Terraform-related `.gitignore` entries are preventive only.
+Docker is not implemented. Terraform configuration is present under `infra/terraform/`, but no state, saved plan, apply result, or import result is committed. Versioned Terraform must not be represented as deployed infrastructure until a reviewed operation and evidence establish that state.

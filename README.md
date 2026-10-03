@@ -23,6 +23,8 @@ Documentation of an AWS result is a record of that verification, not a live chec
 | `.github/workflows/deploy.yml` | Deployment of `index.html` and `style.css` to an EC2 host over SSH. |
 | `configs/nginx/web.lab.test.conf` | Proposed HTTP/HTTPS virtual host using `/var/www/html` and TLS 1.2/1.3. |
 | `scripts/bootstrap.sh` | Idempotent Ubuntu 24.04 bootstrap for Nginx, site files, and a server-generated laboratory certificate. |
+| `scripts/collect-evidence.sh` | Server-side collector for non-sensitive operational evidence with per-check exit statuses. |
+| `evidence/README.md` | Evidence matrix, verified Actions links, collection policy, and external test procedures. |
 
 The workflow runs on relevant pushes to `main` or by manual dispatch. It:
 
@@ -104,7 +106,10 @@ Ignore rules for Terraform state, variable files, credentials, keys, and certifi
 |   |-- 03-deployment-and-verification.md
 |   `-- 04-server-bootstrap.md
 |-- configs/nginx/web.lab.test.conf
-|-- scripts/bootstrap.sh
+|-- evidence/README.md
+|-- scripts/
+|   |-- bootstrap.sh
+|   `-- collect-evidence.sh
 |-- .gitignore
 |-- README.md
 |-- index.html
@@ -114,3 +119,5 @@ Ignore rules for Terraform state, variable files, credentials, keys, and certifi
 ## Project status
 
 The repository contains a complete static site, an SSH-based GitHub Actions deployment workflow, and a reproducible proposal for the Ubuntu/Nginx host configuration. AWS networking, EC2, administration, Nginx, HTTP/HTTPS, TLS, and a successful automated deployment are documented as previously verified operational results. The live AWS state was not queried, the proposed server files have not been tested on EC2, and the AWS environment is not reproducible from infrastructure-as-code.
+
+Verifiable artifacts and pending collection work are tracked in the [evidence index](evidence/README.md). Documented commands remain procedures until their real, reviewed output is added there.

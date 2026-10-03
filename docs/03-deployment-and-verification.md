@@ -133,13 +133,16 @@ The repository implements `Deploy website to EC2` in `.github/workflows/deploy.y
 The current workflow:
 
 1. runs for relevant changes on `main` or by manual dispatch;
-2. configures SSH from GitHub Actions secrets;
-3. uploads `index.html` and `style.css` to a temporary directory on the EC2 host;
-4. installs both files in `/var/www/html`;
-5. runs `nginx -t` and reloads Nginx;
-6. runs `curl -fsS http://127.0.0.1/` and discards the response body.
+2. shares a non-canceling concurrency group with the manual versioned workflow;
+3. configures SSH from GitHub Actions secrets;
+4. uploads `index.html` and `style.css` to a temporary directory on the EC2 host;
+5. installs both files in `/var/www/html`;
+6. runs `nginx -t` and reloads Nginx;
+7. runs `curl -fsS http://127.0.0.1/` and discards the response body.
 
 Therefore, a successful current run demonstrates that the upload and remote commands completed, Nginx accepted its configuration, and the local HTTP request did not return a curl/HTTP error. It does **not** demonstrate that the page contains `Deployed automatically with GitHub Actions.` or any other specific text. It also does not test the external endpoint or HTTPS.
+
+The repository also contains the separate `Deploy versioned website to EC2` workflow. It is manual-only and must remain unused until the EC2 preparation in [Versioned Deployment and Rollback Proposal](05-versioned-deployment.md) succeeds. Its implemented checks cover `index.html`, `style.css`, and a SHA-bearing `VERSION` file over local and external HTTP and HTTPS. HTTPS with `--insecure` checks transport through the self-signed laboratory endpoint; it is not evidence of certificate trust. No execution or EC2 migration result is recorded for this new workflow.
 
 ## Status matrix
 
@@ -147,6 +150,7 @@ Therefore, a successful current run demonstrates that the upload and remote comm
 |---|---|---|
 | Static HTML/CSS site | Implemented | Source files are committed |
 | GitHub Actions SSH deployment | Implemented | Workflow is committed; successful execution is recorded |
+| Versioned deployment and rollback | Implemented as a manual-only proposal | EC2 preparation and workflow execution remain pending |
 | VPC, subnet, Internet Gateway, route table, Security Group | Terraform proposal committed; not applied or imported | Earlier deployment and checks are recorded separately |
 | EC2, Ubuntu 24.04 LTS, and SSM IAM profile | Terraform proposal committed; not applied or imported | Earlier instance and OS checks are recorded separately; current IAM identifiers remain pending |
 | SSH and Session Manager | No implementation files | Successful access and service state are recorded |

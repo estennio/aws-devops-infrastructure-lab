@@ -65,7 +65,9 @@ If a check fails, the script stops without overwriting either file. Certificate 
 
 The existing workflow uploads only `index.html` and `style.css`, installs them in `/var/www/html`, executes `nginx -t`, reloads Nginx, and requests `http://127.0.0.1/`.
 
-This proposal preserves that web root and serves HTTP directly, so the workflow does not need to change. Changes limited to `configs/`, `scripts/`, or `docs/` do not match the workflow's current push path filters.
+This proposal preserves that web root and serves HTTP directly, so the workflow's deployment steps do not need to change. Changes limited to `configs/`, `scripts/`, or `docs/` do not match the workflow's current push path filters.
+
+The optional versioned deployment uses a different document root and requires a deliberate migration after this bootstrap. It is documented separately in [Versioned Deployment and Rollback Proposal](05-versioned-deployment.md). Until that migration is verified, `.github/workflows/deploy.yml` remains the compatible deployment path and the new workflow must not be dispatched.
 
 ## Verification on the server
 

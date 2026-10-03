@@ -21,13 +21,16 @@ Documentation of an AWS result is a record of that verification, not a live chec
 | `index.html` | Static portfolio page describing the lab. |
 | `style.css` | Responsive presentation for the page, with no runtime dependency. |
 | `.github/workflows/deploy.yml` | Deployment of `index.html` and `style.css` to an EC2 host over SSH. |
+| `.github/workflows/deploy-versioned.yml` | Manual-only SHA-addressed deployment with atomic activation, validation, and rollback after EC2 migration. |
 | `configs/nginx/web.lab.test.conf` | Proposed HTTP/HTTPS virtual host using `/var/www/html` and TLS 1.2/1.3. |
+| `configs/nginx/web.lab.test.versioned.conf` | Post-migration virtual host that serves the atomic `current` release link. |
 | `scripts/bootstrap.sh` | Idempotent Ubuntu 24.04 bootstrap for Nginx, site files, and a server-generated laboratory certificate. |
+| `scripts/prepare-versioned-deploy.sh` and `scripts/versioned-deploy.sh` | Guarded EC2 migration plus server-side release activation and rollback. |
 | `scripts/collect-evidence.sh` | Server-side collector for non-sensitive operational evidence with per-check exit statuses. |
 | `evidence/README.md` | Evidence matrix, verified Actions links, collection policy, and external test procedures. |
 | `infra/terraform/` | Minimum VPC, public subnet, routing, Security Group, EC2, and SSM IAM configuration. |
 
-The workflow runs on relevant pushes to `main` or by manual dispatch. It:
+The legacy workflow runs on relevant pushes to `main` or by manual dispatch. It:
 
 1. reads the SSH key, host key, host, and user from GitHub Actions secrets;
 2. creates a remote temporary directory and uploads the two website files with `scp`;
@@ -35,6 +38,10 @@ The workflow runs on relevant pushes to `main` or by manual dispatch. It:
 4. runs `nginx -t`, reloads Nginx, and requests `http://127.0.0.1/` with `curl -fsS`.
 
 The final request checks that the local HTTP endpoint responds without an HTTP error. The workflow does **not** search the response for a specific phrase, and it does not validate the external endpoint, HTTPS, or the contents of `style.css`.
+
+A separate versioned workflow prepares complete releases by commit SHA, switches a symbolic link atomically, compares the served `VERSION` with the workflow SHA, performs local and external HTTP/HTTPS transport checks, and rolls back on failure. It is intentionally manual-only because the EC2 migration has not been performed or verified. See [Versioned Deployment and Rollback Proposal](docs/05-versioned-deployment.md).
+
+Both workflows use the same concurrency group with in-progress cancellation disabled, preventing overlapping EC2 deployments without interrupting a running deployment.
 
 The versioned server configuration is a reproducible proposal, not an export of the active EC2 configuration, and it has not been applied to the instance as part of this repository change. See [Reproducible Nginx Server Proposal](docs/04-server-bootstrap.md) for requirements, permissions, certificate handling, and verification steps.
 

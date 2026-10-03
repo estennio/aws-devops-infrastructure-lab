@@ -32,6 +32,7 @@ Never include credentials, session tokens, private keys, secret values, full env
 | Certificate SAN | Collector output from `openssl x509 -noout -ext subjectAltName` showing `DNS:web.lab.test` | Same reviewed server artifact | Pending |
 | TLS 1.3 | Collector output from a forced TLS 1.3 handshake showing the negotiated protocol | Same reviewed server artifact | Pending |
 | GitHub Actions | Public completed run for `Deploy website to EC2`; the run verifies only the steps implemented by that workflow | [Run 37144567040](https://github.com/estennio/aws-devops-infrastructure-lab/actions/runs/37144567040), commit `c83425515b175a0dc70bd9a6afd9e52b03933014` | Available |
+| Versioned GitHub Actions deploy | Completed manual run showing the expected SHA in local and external HTTP/HTTPS checks, including any rollback result | `.github/workflows/deploy-versioned.yml`; no run link is available | Pending |
 
 The AWS and EC2 rows remain pending even though earlier results are described in `docs/03-deployment-and-verification.md`: no corresponding raw capture or exported artifact is currently committed.
 

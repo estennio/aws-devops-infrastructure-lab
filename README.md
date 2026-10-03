@@ -199,12 +199,6 @@ Web Application
 - [x] TLS 1.3 verified
 - [x] Automated deployment with GitHub Actions verified
 
-### Next
-
-- [ ] Add additional infrastructure only when it provides a clear technical benefit
-- [ ] Consider a publicly trusted certificate/domain only if it adds a meaningful learning objective
-- [ ] Continue documenting new validation evidence as the laboratory evolves
-
 ## Intentionally Not Deployed
 
 The repository contains planning material for a larger architecture, but these resources have **not** been created as part of the current environment:

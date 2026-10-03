@@ -11,9 +11,10 @@ The goal is to keep the repository synchronized with the real AWS environment an
 - AWS Region: `us-east-2`
 - VPC: `10.20.0.0/16`
 - Public Subnet A: `10.20.1.0/24`
-- EC2 instance: `t3.micro`
+- EC2 instance: `lab-web-server` (`i-08f84a35805b6b66d`), `t3.micro`
 - OS: Ubuntu Server 24.04 LTS
 - Web server: Nginx
+- Administration: SSH and AWS Systems Manager Session Manager
 
 ## 1. EC2 Access
 
@@ -243,7 +244,52 @@ Deployment validation
 
 The workflow successfully uploaded `index.html` and `style.css` and validated the deployment.
 
-## 13. Current Verification Matrix
+## 13. AWS Systems Manager / Session Manager Verification
+
+AWS Systems Manager recognizes `lab-web-server` (`i-08f84a35805b6b66d`) as a managed node. The verified Systems Manager state is:
+
+- SSM Agent: running
+- ping status: `Online`
+- Session Manager: administrative session opened successfully
+- session user: `ssm-user`
+
+Inside the Session Manager session, the Nginx configuration was validated with:
+
+```bash
+sudo nginx -t
+```
+
+Verified result:
+
+```text
+syntax is ok
+test is successful
+```
+
+The Nginx service state was verified with:
+
+```bash
+sudo systemctl is-active nginx
+```
+
+Verified result:
+
+```text
+active
+```
+
+The session also confirmed the following TCP listeners:
+
+```text
+0.0.0.0:80 LISTEN
+0.0.0.0:443 LISTEN
+[::]:80 LISTEN
+[::]:443 LISTEN
+```
+
+Session Manager is therefore a verified administrative path alongside the existing verified SSH access.
+
+## 14. Current Verification Matrix
 
 | Component | Status |
 |---|---|
@@ -255,6 +301,8 @@ The workflow successfully uploaded `index.html` and `style.css` and validated th
 | EC2 | Verified |
 | Ubuntu 24.04 LTS | Verified |
 | SSH | Verified |
+| AWS Systems Manager | Verified |
+| Session Manager | Verified |
 | Nginx | Verified |
 | HTTP local | Verified |
 | HTTP external | Verified |
@@ -281,6 +329,8 @@ The project should preserve screenshots or terminal captures showing:
 - Security Group rules
 - EC2 instance state
 - Successful SSH session
+- Systems Manager managed-node status, SSM Agent state, and Online ping status
+- Successful Session Manager session as `ssm-user`
 - Ubuntu version
 - Nginx service status
 - HTTP response
@@ -293,7 +343,7 @@ Evidence must be generated from the actual environment. No fabricated screenshot
 
 ## Next Implementation Stage
 
-1. Evaluate AWS Systems Manager as an alternative to direct SSH.
-2. Improve operational security where appropriate.
-3. Add further AWS services only when they provide a clear technical objective.
+1. Improve operational security and repeatable verification where appropriate.
+2. Continue documenting new operational evidence as the laboratory evolves.
+3. Add further AWS services or technologies only when they provide a clear technical objective.
 4. Consider a publicly trusted certificate/domain only if it adds a meaningful learning objective.

@@ -1,231 +1,86 @@
 # AWS Infrastructure Architecture
 
-## Overview
+## Documentation boundary
 
-This document describes the **current verified AWS infrastructure** and separates it from future architecture ideas.
+This document describes the AWS topology recorded during lab verification. It is not generated from a live AWS inventory, and the repository contains no infrastructure-as-code definition for these resources.
 
-- **AWS Region:** US East (Ohio)
-- **Region code:** `us-east-2`
-- **VPC CIDR:** `10.20.0.0/16`
-- **Public Subnet A:** `10.20.1.0/24`
+Use the following labels consistently:
 
-The current environment uses a single public subnet and one EC2 application server. Additional private/public layers remain future options and are not part of the deployed environment.
+- **repository implementation:** source files that can be inspected in this repository;
+- **recorded verification:** AWS, EC2, and client results transcribed in [Deployment and Verification](03-deployment-and-verification.md);
+- **planned / not implemented:** components with no implementation or recorded deployment.
 
-## Current Verified Architecture
+## Recorded deployed topology
 
 ```text
 Internet
     |
-    v
 Internet Gateway
     |
-    v
-VPC 10.20.0.0/16
+VPC 10.20.0.0/16 (us-east-2)
     |
-    v
 Public Subnet A 10.20.1.0/24
     |
-    v
 Security Group
     |
-    v
 EC2 lab-web-server
-i-08f84a35805b6b66d · t3.micro
-Ubuntu Server 24.04 LTS
-    |
-    +--> Administration: SSH / Session Manager
-    |
-    +--> Nginx
-           |
-           +--> HTTP :80
-           |
-           +--> HTTPS :443 / TLS 1.3
-           |
-           v
-        Web Application
+i-08f84a35805b6b66d / t3.micro / Ubuntu Server 24.04 LTS
+    |-- Administration: SSH and Session Manager
+    `-- Nginx
+        |-- HTTP :80
+        `-- HTTPS :443 / TLS 1.3
 ```
 
-## Network Components
+The public IPv4 used for testing is not recorded as permanent configuration because it can change when no Elastic IP is assigned.
 
-| Resource | Current state |
-|---|---|
-| VPC | Created and verified |
-| Public Subnet A | Created and verified |
-| Internet Gateway | Created, attached, and verified |
-| Public Route Table | Created and verified |
-| Default route | `0.0.0.0/0` → Internet Gateway |
-| Security Group | Created and used by EC2 |
-| Public IPv4 | Assigned to EC2 during testing |
+## Component status
 
-The public IPv4 address is intentionally not documented as a permanent value because an EC2 public IPv4 address can change when instance lifecycle operations occur unless an Elastic IP is used.
+| Component | Status represented by this repository | Basis |
+|---|---|---|
+| VPC, public subnet, Internet Gateway, route table, Security Group | Recorded as deployed and verified | Transcribed AWS environment checks |
+| EC2 `lab-web-server` (`t3.micro`) | Recorded as deployed and verified | Transcribed instance and OS checks |
+| SSH and Session Manager | Recorded as operational | Transcribed SSH, managed-node, and session results |
+| Nginx, HTTP, HTTPS, TLS 1.3 | Recorded as operational | Transcribed service, listener, request, and OpenSSL results |
+| Static website | Implemented in the repository | `index.html` and `style.css` |
+| GitHub Actions delivery | Implemented in the repository; successful execution recorded | `.github/workflows/deploy.yml` and the verification record |
 
-## Compute
+Raw AWS exports, screenshots, terminal captures, and workflow logs are not committed. Consequently, the recorded environment cannot be independently reconstructed or confirmed as currently running from repository contents alone.
 
-The deployed compute instance is:
+## Network and compute record
 
-- **Name:** `lab-web-server`
-- **Instance ID:** `i-08f84a35805b6b66d`
-- **Instance type:** `t3.micro`
+- **Region:** US East (Ohio), `us-east-2`
+- **VPC:** `10.20.0.0/16`
+- **Public subnet:** `10.20.1.0/24`
+- **Default route:** `0.0.0.0/0` to the Internet Gateway
+- **Instance:** `lab-web-server` (`i-08f84a35805b6b66d`), `t3.micro`
 - **Operating system:** Ubuntu Server 24.04 LTS
-- **Subnet:** Public Subnet A
-- **Administration:** SSH and AWS Systems Manager Session Manager
 - **Web server:** Nginx
 
-The instance was successfully accessed from Windows PowerShell using the EC2 key pair. AWS Systems Manager also recognizes it as an Online managed node with the SSM Agent running, and Session Manager successfully opened an administrative session as `ssm-user`.
+The verification record reports external `200 OK` responses over HTTP and HTTPS. It also reports Nginx listening on TCP 80 and 443, TLS 1.3 negotiation, and a self-signed certificate with CN/SAN `web.lab.test`.
 
-## Security
+## Administration and security boundary
 
-The current application requires:
+SSH and Systems Manager Session Manager are recorded as working administration paths. Session Manager did not replace SSH: the deployment workflow still connects over SSH and therefore depends on appropriate network access and GitHub Actions secrets.
 
-- TCP 22 for SSH administration
-- TCP 80 for HTTP
-- TCP 443 for HTTPS/TLS
+The documented application paths use:
 
-TCP 80 and TCP 443 are active and verified for the current Nginx service. HTTPS uses TLS 1.3 with a self-signed certificate whose CN/SAN is `web.lab.test`. The certificate is intended for laboratory verification and is not a publicly trusted production certificate.
+- TCP 22 for SSH administration and automated delivery;
+- TCP 80 for HTTP;
+- TCP 443 for HTTPS/TLS.
 
-SSH access should be restricted to the administrator's current public IP whenever practical. Public SSH exposure should not be treated as the desired production configuration.
+The repository does not include Security Group rules, IAM policies, Nginx configuration, certificates, private keys, or GitHub Actions secret values. The self-signed certificate is a lab artifact and is not publicly trusted.
 
-## Verified Connectivity
+## Planned / not implemented
 
-### SSH
+The following are future options only:
 
-The following was verified from Windows PowerShell:
+- additional public or private subnets and availability zones;
+- NAT Gateway;
+- Amazon RDS PostgreSQL or another database layer;
+- database Security Group;
+- Load Balancer and Auto Scaling;
+- ECS or EKS.
 
-```text
-ssh -i .\\lab-key.pem ubuntu@<public-ip>
-```
+A possible private database design could use private subnets, disabled public access, and TCP 5432 allowed only from the application tier. No database is recorded as deployed.
 
-Inside the instance:
-
-```text
-systemctl is-active ssh
-active
-```
-
-The SSH daemon was also verified listening on TCP/22.
-
-### AWS Systems Manager / Session Manager
-
-The EC2 instance was verified in AWS Systems Manager with the following state:
-
-- recognized as a managed node
-- SSM Agent running
-- ping status `Online`
-- Session Manager administrative session opened successfully
-- session user `ssm-user`
-
-SSH remains configured and verified; Session Manager is an additional verified administration path and does not replace the documented SSH workflow.
-
-### Nginx
-
-Nginx was verified as running:
-
-```text
-systemctl is-active nginx
-active
-```
-
-A local HTTP request returned:
-
-```text
-HTTP/1.1 200 OK
-Server: nginx/1.24.0 (Ubuntu)
-```
-
-### External HTTP
-
-From Windows PowerShell, an external request to the EC2 public IPv4 address returned:
-
-```text
-HTTP/1.1 200 OK
-Server: nginx/1.24.0 (Ubuntu)
-Content-Type: text/html
-```
-
-This verifies the complete path from the external client through the AWS public network path to Nginx.
-
-### External HTTPS and TLS
-
-From Windows PowerShell, requests to both the EC2 public IPv4 and the certificate hostname resolved to that address returned:
-
-```text
-HTTP/1.1 200 OK
-Server: nginx/1.24.0 (Ubuntu)
-```
-
-TLS negotiation was verified as TLS 1.3. The self-signed certificate was verified with:
-
-- Common Name: `web.lab.test`
-- Subject Alternative Name: `DNS:web.lab.test`
-
-Nginx was also verified listening on TCP/80 and TCP/443 over IPv4 and IPv6.
-
-## Future Architecture
-
-The repository previously considered a larger architecture containing:
-
-- Public Subnet B
-- Private Subnet A
-- Private Subnet B
-- Amazon RDS PostgreSQL
-- Database Security Group
-- NAT Gateway
-- Load Balancer
-- Auto Scaling
-- ECS/EKS
-- Additional availability zones
-
-These components are **not deployed** and remain future considerations only.
-
-They must not be represented as deployed until they are independently created and verified.
-
-### Private database concept
-
-A future RDS design may use:
-
-- PostgreSQL
-- Private subnets
-- Public access disabled
-- Database Security Group
-- TCP 5432 allowed only from the application tier
-
-No RDS database currently exists in this laboratory.
-
-## NAT Gateway
-
-A NAT Gateway is deliberately not part of the current environment.
-
-The project does not need to incur NAT Gateway costs merely to increase architectural complexity. It can be evaluated later if private resources require outbound Internet access.
-
-## Current Status
-
-### Verified
-
-- VPC
-- Public Subnet A
-- Internet Gateway
-- Public Route Table
-- EC2 t3.micro
-- Ubuntu Server 24.04 LTS
-- SSH
-- AWS Systems Manager managed node (`Online`)
-- SSM Agent running
-- Session Manager access as `ssm-user`
-- Nginx
-- External HTTP access
-- External HTTPS access
-- TLS 1.3
-- Self-signed certificate with CN/SAN `web.lab.test`
-- GitHub Actions
-- Automated deployment via SSH to EC2
-
-### Pending / Not Deployed
-
-- Additional public or private subnets, if justified
-- NAT Gateway, if justified
-- RDS or another database layer, if justified
-- Load Balancer and Auto Scaling, if justified
-- ECS/EKS, if justified
-- Additional availability zones, if justified
-
-The deployed AWS environment takes priority over any older planning diagrams or documentation.
+Docker and Terraform are also not implemented. There is no `Dockerfile`, Compose file, `.tf` configuration, module, or Terraform state in the repository. Terraform-related `.gitignore` entries are preventive only.

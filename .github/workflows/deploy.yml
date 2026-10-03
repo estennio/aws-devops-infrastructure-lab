@@ -13,6 +13,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: aws-devops-ec2-deploy
+  cancel-in-progress: false
+
 jobs:
   deploy:
     name: Deploy static site to EC2

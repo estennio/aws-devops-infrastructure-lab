@@ -8,7 +8,7 @@ The repository separates what is inspectable in source code from operational res
 
 | Category | Meaning in this project |
 |---|---|
-| Implemented in the repository | Files that can be inspected here: the static site and its GitHub Actions deployment workflow. |
+| Implemented in the repository | Files that can be inspected here: the static site, GitHub Actions deployment workflow, and a reproducible Nginx server proposal. |
 | Recorded verification | Commands and results observed in the AWS/EC2 environment and transcribed in [Deployment and Verification](docs/03-deployment-and-verification.md). Raw screenshots and workflow logs are not stored in this repository. |
 | Planned / not implemented | Ideas with no deployed component or implementation file in the repository. |
 
@@ -21,6 +21,8 @@ Documentation of an AWS result is a record of that verification, not a live chec
 | `index.html` | Static portfolio page describing the lab. |
 | `style.css` | Responsive presentation for the page, with no runtime dependency. |
 | `.github/workflows/deploy.yml` | Deployment of `index.html` and `style.css` to an EC2 host over SSH. |
+| `configs/nginx/web.lab.test.conf` | Proposed HTTP/HTTPS virtual host using `/var/www/html` and TLS 1.2/1.3. |
+| `scripts/bootstrap.sh` | Idempotent Ubuntu 24.04 bootstrap for Nginx, site files, and a server-generated laboratory certificate. |
 
 The workflow runs on relevant pushes to `main` or by manual dispatch. It:
 
@@ -30,6 +32,8 @@ The workflow runs on relevant pushes to `main` or by manual dispatch. It:
 4. runs `nginx -t`, reloads Nginx, and requests `http://127.0.0.1/` with `curl -fsS`.
 
 The final request checks that the local HTTP endpoint responds without an HTTP error. The workflow does **not** search the response for a specific phrase, and it does not validate the external endpoint, HTTPS, or the contents of `style.css`.
+
+The versioned server configuration is a reproducible proposal, not an export of the active EC2 configuration, and it has not been applied to the instance as part of this repository change. See [Reproducible Nginx Server Proposal](docs/04-server-bootstrap.md) for requirements, permissions, certificate handling, and verification steps.
 
 ## Recorded environment
 
@@ -97,7 +101,10 @@ Ignore rules for Terraform state, variable files, credentials, keys, and certifi
 |-- .github/workflows/deploy.yml
 |-- docs/
 |   |-- 02-architecture.md
-|   `-- 03-deployment-and-verification.md
+|   |-- 03-deployment-and-verification.md
+|   `-- 04-server-bootstrap.md
+|-- configs/nginx/web.lab.test.conf
+|-- scripts/bootstrap.sh
 |-- .gitignore
 |-- README.md
 |-- index.html
@@ -106,4 +113,4 @@ Ignore rules for Terraform state, variable files, credentials, keys, and certifi
 
 ## Project status
 
-The repository contains a complete static site and an SSH-based GitHub Actions deployment workflow. AWS networking, EC2, administration, Nginx, HTTP/HTTPS, TLS, and a successful automated deployment are documented as previously verified operational results. The live AWS state is not queried by this repository, and the environment is not reproducible from infrastructure-as-code.
+The repository contains a complete static site, an SSH-based GitHub Actions deployment workflow, and a reproducible proposal for the Ubuntu/Nginx host configuration. AWS networking, EC2, administration, Nginx, HTTP/HTTPS, TLS, and a successful automated deployment are documented as previously verified operational results. The live AWS state was not queried, the proposed server files have not been tested on EC2, and the AWS environment is not reproducible from infrastructure-as-code.

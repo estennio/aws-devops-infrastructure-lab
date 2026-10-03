@@ -157,7 +157,7 @@ Therefore, a successful current run demonstrates that the upload and remote comm
 
 ## Evidence to preserve in future
 
-Future updates should attach or link real artifacts when practical, such as:
+The [evidence index](../evidence/README.md) is the source of truth for available and pending artifacts. Future updates should attach or link real artifacts when practical, such as:
 
 - AWS resource configuration exports or screenshots;
 - SSH and Session Manager terminal captures with sensitive values removed;

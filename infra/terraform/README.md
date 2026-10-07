@@ -1,10 +1,10 @@
 # Minimal AWS Lab Infrastructure with Terraform
 
-## Status and scope
+## Scope
 
-This directory defines a reproducible proposal for the laboratory's minimum AWS architecture. Versioned Terraform configuration does **not** mean that the resources have been created, imported, validated against the current account, or applied to the documented EC2 environment.
+This directory defines the laboratory's minimum AWS architecture as code. It is written to create a new environment, or to be imported over the existing one with the procedure below; state and apply output are not committed.
 
-No `terraform apply`, `terraform destroy`, or `terraform import` was executed while preparing these files. The configuration does not create credentials, access keys, private keys, an EC2 key pair, NAT Gateway, RDS, Load Balancer, Auto Scaling, containers, or resources outside this scope:
+The configuration does not create credentials, access keys, private keys, an EC2 key pair, NAT Gateway, RDS, Load Balancer, Auto Scaling, containers, or resources outside this scope:
 
 - Region `us-east-2`;
 - VPC `10.20.0.0/16`;
@@ -122,7 +122,7 @@ Before importing, an authorized operator must collect the actual current identif
 Then:
 
 1. Back up any existing Terraform state and use an isolated migration branch/workspace.
-2. Set variables to match the real environment. For an existing manually configured instance, start with `enable_bootstrap=false` unless its current user data exactly matches this proposal.
+2. Set variables to match the real environment. For an existing manually configured instance, start with `enable_bootstrap=false` unless its current user data exactly matches this configuration.
 3. Update resource arguments to match reality before allowing Terraform to manage anything.
 4. Initialize Terraform, then import each resource with its real identifier. The following are templates, not executable IDs:
 

@@ -1,16 +1,16 @@
 # AWS Infrastructure Architecture
 
-## Documentation boundary
+## Overview
 
-This document describes the AWS topology recorded during lab verification. It is not generated from a live AWS inventory. The repository now includes a minimum Terraform definition, but that code has not been applied, imported, or reconciled with the recorded environment.
+This document describes the AWS topology of the laboratory: network, compute, administration, and web delivery. Results come from the verification sessions transcribed in [Deployment and Verification](03-deployment-and-verification.md) and the screenshots in the [evidence index](../evidence/README.md); the topology is not generated from a live AWS inventory.
 
-Use the following labels consistently:
+Content is labeled as:
 
 - **repository implementation:** source files that can be inspected in this repository;
-- **recorded verification:** AWS, EC2, and client results transcribed in [Deployment and Verification](03-deployment-and-verification.md);
-- **planned / not implemented:** components with no implementation or recorded deployment.
+- **recorded verification:** AWS, EC2, and client results with their supporting evidence;
+- **scope decisions:** components deliberately left out of the laboratory.
 
-## Recorded deployed topology
+## Deployed topology
 
 ```text
 Internet
@@ -33,20 +33,20 @@ i-08f84a35805b6b66d / t3.micro / Ubuntu Server 24.04 LTS
 
 The public IPv4 used for testing is not recorded as permanent configuration because it can change when no Elastic IP is assigned.
 
-## Component status
+## Components
 
-| Component | Status represented by this repository | Basis |
+| Component | Status | Basis |
 |---|---|---|
-| VPC, public subnet, Internet Gateway, route table, Security Group | Recorded as deployed and verified | Transcribed AWS environment checks |
-| EC2 `lab-web-server` (`t3.micro`) | Recorded as deployed and verified | Transcribed instance and OS checks |
-| SSH and Session Manager | Recorded as operational | Transcribed SSH, managed-node, and session results |
-| Nginx, HTTP, HTTPS, TLS 1.3 | Recorded as operational | Transcribed service, listener, request, and OpenSSL results |
+| VPC, public subnet, Internet Gateway, route table, Security Group | Deployed and verified | Transcribed AWS environment checks |
+| EC2 `lab-web-server` (`t3.micro`) | Deployed and verified | Transcribed instance and OS checks |
+| SSH and Session Manager | Operational | Transcribed SSH, managed-node, and session results |
+| Nginx, HTTP, HTTPS, TLS 1.3 | Operational | Transcribed service, listener, request, and OpenSSL results |
 | Static website | Implemented in the repository | `index.html` and `style.css` |
-| GitHub Actions delivery | Implemented in the repository; successful execution recorded | `.github/workflows/deploy.yml` and the verification record |
-| Ubuntu/Nginx bootstrap | Reproducible proposal; not verified on EC2 | `scripts/bootstrap.sh` and `configs/nginx/web.lab.test.conf` |
-| Minimum AWS infrastructure | Terraform configuration present; not applied or imported | `infra/terraform/` |
+| GitHub Actions delivery | Implemented; successful runs linked in the evidence index | `.github/workflows/deploy.yml` and the verification record |
+| Ubuntu/Nginx bootstrap | Reproducible server configuration | `scripts/bootstrap.sh` and `configs/nginx/web.lab.test.conf` |
+| Minimum AWS infrastructure | Terraform configuration for the minimum architecture | `infra/terraform/` |
 
-Raw AWS exports, screenshots, terminal captures, and workflow logs are not committed. Consequently, the recorded environment cannot be independently reconstructed or confirmed as currently running from repository contents alone.
+Curated screenshots of the AWS resources, Session Manager, HTTP/HTTPS, and TLS are committed under `evidence/artifacts/`, and the successful workflow runs are linked in the evidence index. Raw AWS exports and workflow logs are not stored, so the topology is a verified record rather than a live inventory.
 
 ## Network and compute record
 
@@ -58,7 +58,7 @@ Raw AWS exports, screenshots, terminal captures, and workflow logs are not commi
 - **Operating system:** Ubuntu Server 24.04 LTS
 - **Web server:** Nginx
 
-The verification record reports external `200 OK` responses over HTTP and HTTPS. It also reports Nginx listening on TCP 80 and 443, TLS 1.3 negotiation, and a self-signed certificate with CN/SAN `web.lab.test`.
+The verification record reports external `200 OK` responses over HTTP and HTTPS, Nginx listening on TCP 80 and 443, TLS 1.3 negotiation, and a certificate with CN/SAN `web.lab.test`. The certificate was first self-signed and was later re-issued by a laboratory Root CA (see the TLS evidence).
 
 ## Administration and security boundary
 
@@ -70,19 +70,21 @@ The documented application paths use:
 - TCP 80 for HTTP;
 - TCP 443 for HTTPS/TLS.
 
-The repository does not include Security Group rules, IAM policies, generated certificates, private keys, or GitHub Actions secret values. It now includes a proposed Nginx configuration and bootstrap, documented in [Reproducible Nginx Server Proposal](04-server-bootstrap.md); these files are not asserted to match the active EC2 configuration. The self-signed certificate is a lab artifact and is not publicly trusted.
+The repository does not include Security Group rules, IAM policies, generated certificates, private keys, or GitHub Actions secret values. The Nginx configuration and bootstrap are documented in [Server Bootstrap](04-server-bootstrap.md); they are a reproducible configuration and not an export of the active EC2 server. The laboratory certificate is not publicly trusted.
 
-## Planned / not implemented
+## Scope decisions
 
-The following are future options only:
+The laboratory intentionally keeps a minimal footprint. The following are outside its scope:
 
 - additional public or private subnets and availability zones;
 - NAT Gateway;
-- Amazon RDS PostgreSQL or another database layer;
-- database Security Group;
+- Amazon RDS PostgreSQL or another database layer, and a database Security Group;
 - Load Balancer and Auto Scaling;
-- ECS or EKS.
+- ECS or EKS;
+- Docker and Docker Compose.
 
-A possible private database design could use private subnets, disabled public access, and TCP 5432 allowed only from the application tier. No database is recorded as deployed.
+A natural extension would be a private database tier: private subnets, disabled public access, and TCP 5432 allowed only from the application tier.
 
-Docker is not implemented. Terraform configuration is present under `infra/terraform/`, but no state, saved plan, apply result, or import result is committed. Versioned Terraform must not be represented as deployed infrastructure until a reviewed operation and evidence establish that state.
+## Infrastructure as code
+
+The minimum architecture is defined in `infra/terraform/` (see its [README](../infra/terraform/README.md)). Terraform state, saved plans, and apply or import results are not committed; applying the configuration and preserving its output as evidence is the next stage of the lab.

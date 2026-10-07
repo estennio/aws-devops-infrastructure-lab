@@ -1,13 +1,13 @@
-# Versioned Deployment and Rollback Proposal
+# Versioned Deployment and Rollback
 
-## Current status
+## Overview
 
-The active EC2 configuration was not inspected or changed while this deployment flow was prepared. Consequently:
+This flow adds SHA-addressed releases, atomic activation, validation, and rollback on top of the existing deployment. It is delivered as repository code and is applied to EC2 through the preparation steps below:
 
 - `.github/workflows/deploy.yml` remains the automatic legacy deployment; only shared concurrency coordination is added, while its deployment steps remain unchanged;
 - `.github/workflows/deploy-versioned.yml` is a separate, manual-only workflow;
-- the versioned workflow must not be dispatched until the server preparation below succeeds;
-- the presence of these files is not evidence that the EC2 migration or a versioned deployment occurred.
+- the versioned workflow is dispatched after the server preparation below succeeds;
+- the EC2 migration and the first versioned run are the next stage of the lab.
 
 The manual workflow reuses `EC2_SSH_KEY`, `EC2_KNOWN_HOSTS`, `EC2_HOST`, and `EC2_USER`. It does not introduce a new secret. The stored host-key material remains mandatory, so SSH does not silently trust an unknown host.
 
@@ -35,7 +35,7 @@ The `VERSION` file contains exactly `${{ github.sha }}`. Local and external HTTP
 
 ## EC2 prerequisites
 
-Preparation expects Ubuntu 24.04 LTS with the existing repository proposal already active:
+Preparation expects Ubuntu 24.04 LTS with the repository's Nginx configuration already active:
 
 - Nginx, curl, `flock`, sudo, and `visudo` available;
 - `/var/www/html/index.html` and `/var/www/html/style.css` present;
@@ -49,7 +49,7 @@ These conditions are checked rather than assumed. A different active Nginx layou
 
 ## Prepare the server
 
-On the EC2 instance, check out a reviewed commit containing this proposal, inspect the scripts, and run:
+On the EC2 instance, check out a reviewed commit containing this flow, inspect the scripts, and run:
 
 ```bash
 cd /opt/aws-devops-infrastructure-lab
@@ -92,9 +92,9 @@ Only after the preparation and checks succeed:
 2. choose the reviewed branch or commit and use **Run workflow**;
 3. confirm that the run reports the expected 40-character SHA for HTTP and HTTPS.
 
-Do not manually dispatch it before preparation. This repository change deliberately does not add a push trigger. Both workflows share one concurrency group with `cancel-in-progress: false`, so neither a legacy run nor a newer manual dispatch can overlap or cancel an active deployment.
+Dispatch it only after preparation. The workflow deliberately has no push trigger. Both workflows share one concurrency group with `cancel-in-progress: false`, so neither a legacy run nor a newer manual dispatch can overlap or cancel an active deployment.
 
-The legacy workflow continues to target `/var/www/html`. Before migration it remains the supported automatic path. After migration, that directory is no longer the Nginx document root, so a legacy run must not be interpreted as publishing the served release. Disable the legacy workflow in the repository settings after migration, or change its triggers only in a later reviewed change backed by EC2 evidence. Do not make the versioned workflow automatic until that transition is verified.
+The legacy workflow continues to target `/var/www/html`. Before migration it remains the supported automatic path. After migration, that directory is no longer the Nginx document root, so a legacy run must not be interpreted as publishing the served release. Disable the legacy workflow in the repository settings after migration, or change its triggers in a later reviewed change backed by EC2 evidence. The versioned workflow becomes automatic only after that transition is verified.
 
 ## Validation and automatic rollback
 

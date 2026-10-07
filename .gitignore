@@ -64,3 +64,6 @@ tfplan
 # Terraform CLI configuration
 .terraformrc
 terraform.rc
+
+# Local inbox (not versioned)
+_inbox/

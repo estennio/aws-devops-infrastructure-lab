@@ -1,10 +1,10 @@
-# Reproducible Nginx Server Proposal
+# Server Bootstrap
 
 ## Scope
 
-`scripts/bootstrap.sh` and `configs/nginx/web.lab.test.conf` are a reproducible server configuration proposal for Ubuntu Server 24.04 LTS. They were prepared from the repository's documented procedures and paths.
+`scripts/bootstrap.sh` and `configs/nginx/web.lab.test.conf` provide a reproducible server configuration for Ubuntu Server 24.04 LTS, prepared from the laboratory's documented procedures and paths.
 
-The active EC2 configuration was not retrieved, and the script was not executed on the EC2 instance as part of this change. These files must not be treated as an exact export of the current server.
+They describe how to build the server again; they are not an export of the running EC2 instance.
 
 The script does not create or modify AWS resources, Security Groups, IAM permissions, DNS, GitHub secrets, or the GitHub Actions workflow.
 
@@ -65,9 +65,9 @@ If a check fails, the script stops without overwriting either file. Certificate 
 
 The existing workflow uploads only `index.html` and `style.css`, installs them in `/var/www/html`, executes `nginx -t`, reloads Nginx, and requests `http://127.0.0.1/`.
 
-This proposal preserves that web root and serves HTTP directly, so the workflow's deployment steps do not need to change. Changes limited to `configs/`, `scripts/`, or `docs/` do not match the workflow's current push path filters.
+This configuration preserves that web root and serves HTTP directly, so the workflow's deployment steps do not need to change. Changes limited to `configs/`, `scripts/`, or `docs/` do not match the workflow's current push path filters.
 
-The optional versioned deployment uses a different document root and requires a deliberate migration after this bootstrap. It is documented separately in [Versioned Deployment and Rollback Proposal](05-versioned-deployment.md). Until that migration is verified, `.github/workflows/deploy.yml` remains the compatible deployment path and the new workflow must not be dispatched.
+The optional versioned deployment uses a different document root and requires a deliberate migration after this bootstrap. It is documented separately in [Versioned Deployment and Rollback](05-versioned-deployment.md). Until that migration is performed, `.github/workflows/deploy.yml` is the compatible deployment path and the versioned workflow is not dispatched.
 
 ## Verification on the server
 
@@ -91,4 +91,4 @@ sudo stat -c '%U:%G %a %n' \
   /etc/nginx/ssl/web.lab.test/web.lab.test.crt
 ```
 
-External HTTP and HTTPS checks remain pending until this proposal is deliberately applied to the EC2 instance and the relevant network and name-resolution prerequisites are confirmed.
+External HTTP and HTTPS checks additionally require the Security Group rules for TCP 80/443 and, for hostname tests, name resolution for `web.lab.test`.

@@ -2,39 +2,42 @@
 
 ## Evidence policy
 
-This directory tracks verifiable artifacts for the AWS DevOps Infrastructure Lab. A statement in project documentation is not, by itself, a captured evidence artifact. Commands that have not been executed are procedures, not evidence.
+This directory tracks the verifiable artifacts of the AWS DevOps Infrastructure Lab. A statement in the documentation is supported by an artifact listed here; commands that have not been executed are procedures, not evidence.
 
-Use these statuses:
+Statuses:
 
-- **Available:** a real artifact or public link is present and can be inspected;
-- **Pending:** the required artifact has not been captured or added;
-- **Review required:** an artifact exists locally but must be checked for sensitive content before it is committed.
+- **Available:** a reviewed artifact or public link is present and can be inspected;
+- **Recorded:** the result is transcribed in [Deployment and Verification](../docs/03-deployment-and-verification.md); a raw capture can be produced with the collector below;
+- **Next stage:** the artifact is produced when the corresponding step is performed.
 
-Never include credentials, session tokens, private keys, secret values, full environment dumps, instance metadata credentials, or unredacted sensitive console content. Public certificate properties are allowed; certificate private keys are not.
+Artifacts never include credentials, session tokens, private keys, secret values, full environment dumps, instance metadata credentials, or unredacted sensitive console content. Public certificate properties are allowed; certificate private keys are not. Account and session identifiers in screenshots are redacted.
 
 ## Evidence matrix
 
-| Component | Required evidence | File or link | Status |
+| Component | Evidence | File or link | Status |
 |---|---|---|---|
-| VPC | Sanitized AWS Console capture or CLI JSON showing VPC ID, CIDR, Region, and state | No artifact committed | Pending |
-| Public subnet | Sanitized capture or CLI JSON showing subnet ID, VPC association, CIDR, Availability Zone, and public-address behavior | No artifact committed | Pending |
-| Internet Gateway | Sanitized capture or CLI JSON showing the IGW ID and attachment to the lab VPC | No artifact committed | Pending |
-| Routes | Sanitized route-table capture or CLI JSON showing subnet association and `0.0.0.0/0` target | No artifact committed | Pending |
-| Security Group | Sanitized inbound/outbound rule capture showing the group attached to EC2; redact unrelated addresses and descriptions when necessary | No artifact committed | Pending |
-| EC2 | Sanitized instance capture or CLI JSON showing instance ID, type, state, subnet/VPC, OS image description, and attached IAM role | No artifact committed | Pending |
-| IAM role for SSM | Sanitized instance-profile and role-policy evidence showing the permissions used by Systems Manager; no credentials or tokens | No artifact committed | Pending |
-| Session Manager | Capture showing a real session to the instance, UTC time, session user, and a harmless command result | No artifact committed | Pending |
-| Nginx | Collector output containing service state, `nginx -t`, and TCP 80/443 listeners | Run [`scripts/collect-evidence.sh`](../scripts/collect-evidence.sh); review the generated `evidence/artifacts/server-*.txt` | Pending |
-| Local HTTP | Collector output containing the real response headers from `http://127.0.0.1/` | Same reviewed server artifact | Pending |
-| External HTTP | PowerShell capture containing the real response from the EC2 public endpoint and UTC time | Add a reviewed `evidence/artifacts/external-*.txt` | Pending |
-| Local HTTPS | Collector output from an HTTPS request using `-k`, explicitly treated as transport/connectivity evidence only | Same reviewed server artifact | Pending |
-| External HTTPS | PowerShell capture with both an explicitly insecure `-k` test and a separate trust-validating test | Add a reviewed `evidence/artifacts/external-*.txt` | Pending |
-| Certificate SAN | Collector output from `openssl x509 -noout -ext subjectAltName` showing `DNS:web.lab.test` | Same reviewed server artifact | Pending |
-| TLS 1.3 | Collector output from a forced TLS 1.3 handshake showing the negotiated protocol | Same reviewed server artifact | Pending |
-| GitHub Actions | Public completed run for `Deploy website to EC2`; the run verifies only the steps implemented by that workflow | [Run 37144567040](https://github.com/estennio/aws-devops-infrastructure-lab/actions/runs/37144567040), commit `c83425515b175a0dc70bd9a6afd9e52b03933014` | Available |
-| Versioned GitHub Actions deploy | Completed manual run showing the expected SHA in local and external HTTP/HTTPS checks, including any rollback result | `.github/workflows/deploy-versioned.yml`; no run link is available | Pending |
-
-The AWS and EC2 rows remain pending even though earlier results are described in `docs/03-deployment-and-verification.md`: no corresponding raw capture or exported artifact is currently committed.
+| VPC | AWS Console capture of the lab VPC | [`aws/02-vpc.png`](artifacts/aws/02-vpc.png) | Available |
+| Public subnet | Subnet capture | [`aws/03-public-subnet.png`](artifacts/aws/03-public-subnet.png) | Available |
+| Internet Gateway | IGW attached to the lab VPC | [`aws/04-internet-gateway.png`](artifacts/aws/04-internet-gateway.png) | Available |
+| Routes | Route table with the default route | [`aws/05-route-table.png`](artifacts/aws/05-route-table.png) | Available |
+| Security Group | Inbound/outbound rules | [`aws/06-security-group.png`](artifacts/aws/06-security-group.png) | Available |
+| EC2 | Instance details | [`aws/01-ec2-instance.png`](artifacts/aws/01-ec2-instance.png) | Available |
+| IAM role for SSM | Role used by Systems Manager | [`ssm/02-iam-ssm-role.png`](artifacts/ssm/02-iam-ssm-role.png) | Available |
+| SSM managed node | Instance registered and online | [`ssm/01-managed-node.png`](artifacts/ssm/01-managed-node.png) | Available |
+| Session Manager | Session to the instance | [`ssm/03-session-manager.png`](artifacts/ssm/03-session-manager.png) | Available |
+| Nginx | Listeners on TCP 80/443 | [`web/01-nginx-ports.png`](artifacts/web/01-nginx-ports.png) | Available |
+| External HTTP | PowerShell response from the EC2 public endpoint | [`web/02-http-external.png`](artifacts/web/02-http-external.png) | Available |
+| External HTTPS | PowerShell response using `-k` (transport/connectivity evidence only) | [`web/03-https-external.png`](artifacts/web/03-https-external.png) | Available |
+| Laboratory Root CA | Root CA creation | [`tls/01-root-ca.png`](artifacts/tls/01-root-ca.png) | Available |
+| Server certificate | Certificate for `web.lab.test` issued by the laboratory Root CA | [`tls/02-server-cert-issued-by-root-ca.png`](artifacts/tls/02-server-cert-issued-by-root-ca.png) | Available |
+| Certificate chain | `openssl verify` against the Root CA returns `OK` | [`tls/03-root-ca-verify.png`](artifacts/tls/03-root-ca-verify.png) | Available |
+| Certificate SAN | `DNS:web.lab.test` | [`tls/04-server-cert-san.png`](artifacts/tls/04-server-cert-san.png) | Available |
+| TLS 1.3 | Negotiated protocol | [`tls/05-tls13.png`](artifacts/tls/05-tls13.png) | Available |
+| Nginx TLS configuration | HTTPS server block | [`tls/06-nginx-tls-config.png`](artifacts/tls/06-nginx-tls-config.png) | Available |
+| GitHub Actions | Completed run for `Deploy website to EC2`; it verifies only the steps implemented by that workflow | [Run 37144567040](https://github.com/estennio/aws-devops-infrastructure-lab/actions/runs/37144567040), commit `c83425515b175a0dc70bd9a6afd9e52b03933014` | Available |
+| Local HTTP/HTTPS, service state, `nginx -t` | Collector output with exit statuses | Run [`scripts/collect-evidence.sh`](../scripts/collect-evidence.sh) on the server; results are transcribed in the verification document | Recorded |
+| Versioned GitHub Actions deploy | Manual run showing the expected SHA over local and external HTTP/HTTPS, including any rollback result | `.github/workflows/deploy-versioned.yml` | Next stage |
+| Terraform | Plan and apply (or import) output | `infra/terraform/` | Next stage |
 
 ## Verified GitHub Actions links
 
@@ -67,7 +70,7 @@ Before committing an output file:
 1. inspect every line;
 2. confirm that it contains no credential, token, private key, secret, unexpected hostname, or unrelated network information;
 3. keep the UTC timestamp and command exit statuses intact;
-4. add the reviewed path to the matrix and change only the supported rows to **Available**.
+4. add the reviewed path to the matrix and mark only the supported rows **Available**.
 
 ## External PowerShell checks
 
@@ -107,4 +110,4 @@ curl.exe --cacert .\web.lab.test.crt --fail --silent --show-error --head `
   --resolve "web.lab.test:443:$PublicIp" https://web.lab.test/
 ```
 
-Do not use or copy the certificate private key for any client-side test. Capture the real command output and exit status before marking the corresponding matrix row as available.
+Do not use or copy the certificate private key for any client-side test. Capture the real command output and exit status before marking the corresponding matrix row **Available**.

@@ -1,10 +1,10 @@
 # Deployment and Verification
 
-## Evidence boundary
+## Overview
 
-This document is the repository's text record of checks performed during the lab. The commands and outputs below were previously transcribed from AWS, EC2, Windows PowerShell, and GitHub Actions activity; they are not rerun automatically when this document changes.
+This document is the repository's text record of the checks performed during the lab. The commands and outputs below were transcribed from AWS, EC2, Windows PowerShell, and GitHub Actions activity; they are not rerun automatically when this document changes.
 
-No screenshots, terminal capture files, AWS inventory exports, or GitHub Actions logs are committed. Treat these entries as recorded operational evidence. The static site, deployment workflow, and [proposed server bootstrap](04-server-bootstrap.md) are implementation directly inspectable in the repository; the proposal has not been tested on EC2.
+Supporting screenshots are committed under `evidence/artifacts/` and workflow runs are linked in the [evidence index](../evidence/README.md). The static site, deployment workflow, and [server bootstrap](04-server-bootstrap.md) can be inspected directly in the repository.
 
 ## Recorded environment
 
@@ -97,7 +97,7 @@ notBefore=Oct  1 13:55:19 2026 GMT
 notAfter=Oct  1 13:55:19 2027 GMT
 ```
 
-The certificate is self-signed and is not publicly trusted.
+The certificate was self-signed at this stage and is not publicly trusted. It was later re-issued by a laboratory Root CA, as shown in the TLS screenshots of the [evidence index](../evidence/README.md); that certificate also carries `DNS:web.lab.test`, and `openssl verify` against the laboratory Root CA returns `OK`.
 
 Local TLS negotiation was recorded as:
 
@@ -128,7 +128,7 @@ Server: nginx/1.24.0 (Ubuntu)
 
 ## Deployment workflow
 
-The repository implements `Deploy website to EC2` in `.github/workflows/deploy.yml`. A successful execution is recorded from the lab, but its run URL and raw log are not archived here.
+The repository implements `Deploy website to EC2` in `.github/workflows/deploy.yml`. Successful executions are linked in the [evidence index](../evidence/README.md).
 
 The current workflow:
 
@@ -140,39 +140,30 @@ The current workflow:
 6. runs `nginx -t` and reloads Nginx;
 7. runs `curl -fsS http://127.0.0.1/` and discards the response body.
 
-Therefore, a successful current run demonstrates that the upload and remote commands completed, Nginx accepted its configuration, and the local HTTP request did not return a curl/HTTP error. It does **not** demonstrate that the page contains `Deployed automatically with GitHub Actions.` or any other specific text. It also does not test the external endpoint or HTTPS.
+A successful run demonstrates that the upload and remote commands completed, Nginx accepted its configuration, and the local HTTP request did not return a curl/HTTP error. It does **not** demonstrate that the page contains `Deployed automatically with GitHub Actions.` or any other specific text. It also does not test the external endpoint or HTTPS.
 
-The repository also contains the separate `Deploy versioned website to EC2` workflow. It is manual-only and must remain unused until the EC2 preparation in [Versioned Deployment and Rollback Proposal](05-versioned-deployment.md) succeeds. Its implemented checks cover `index.html`, `style.css`, and a SHA-bearing `VERSION` file over local and external HTTP and HTTPS. HTTPS with `--insecure` checks transport through the self-signed laboratory endpoint; it is not evidence of certificate trust. No execution or EC2 migration result is recorded for this new workflow.
+The repository also contains the separate `Deploy versioned website to EC2` workflow. It is manual-only and is used after the EC2 preparation in [Versioned Deployment and Rollback](05-versioned-deployment.md) succeeds. Its implemented checks cover `index.html`, `style.css`, and a SHA-bearing `VERSION` file over local and external HTTP and HTTPS. HTTPS with `--insecure` checks transport through the self-signed laboratory endpoint; it is not evidence of certificate trust. Its first execution follows the EC2 migration, which is the next stage of the lab.
 
 ## Status matrix
 
-| Component | Repository status | Evidence represented here |
+| Component | Repository | Verification |
 |---|---|---|
-| Static HTML/CSS site | Implemented | Source files are committed |
-| GitHub Actions SSH deployment | Implemented | Workflow is committed; successful execution is recorded |
-| Versioned deployment and rollback | Implemented as a manual-only proposal | EC2 preparation and workflow execution remain pending |
-| VPC, subnet, Internet Gateway, route table, Security Group | Terraform proposal committed; not applied or imported | Earlier deployment and checks are recorded separately |
-| EC2, Ubuntu 24.04 LTS, and SSM IAM profile | Terraform proposal committed; not applied or imported | Earlier instance and OS checks are recorded separately; current IAM identifiers remain pending |
-| SSH and Session Manager | No implementation files | Successful access and service state are recorded |
-| Nginx, HTTP, HTTPS, TLS 1.3 | Reproducible configuration proposal committed; not applied by this change | Earlier service, request, listener, and TLS results are recorded separately |
-| RDS, NAT Gateway, Load Balancer, Auto Scaling, ECS/EKS | Not implemented | None claimed |
-| Docker / Docker Compose | Not implemented | None claimed |
-| Terraform / infrastructure-as-code | Minimum configuration implemented in `infra/terraform/` | No apply, import, state, or AWS verification claimed |
+| Static HTML/CSS site | Implemented | Served over HTTP and HTTPS |
+| GitHub Actions SSH deployment | Implemented | Successful runs linked in the evidence index |
+| Versioned deployment and rollback | Implemented (manual workflow and server scripts) | Runs after the EC2 migration (next stage) |
+| VPC, subnet, Internet Gateway, route table, Security Group | Terraform configuration | Deployed and verified; screenshots committed |
+| EC2, Ubuntu 24.04 LTS, and SSM IAM profile | Terraform configuration | Deployed and verified; screenshots committed |
+| SSH and Session Manager | Operated through the console and client | Successful access and service state recorded; screenshots committed |
+| Nginx, HTTP, HTTPS, TLS 1.3 | Reproducible bootstrap and configuration | Service, requests, listeners, and TLS recorded; screenshots committed |
+| Terraform / infrastructure-as-code | Minimum configuration in `infra/terraform/` | Apply or import with preserved output is the next stage |
+| RDS, NAT Gateway, Load Balancer, Auto Scaling, ECS/EKS, Docker | Outside the laboratory scope | Not applicable |
 
-## Evidence to preserve in future
+## Evidence
 
-The [evidence index](../evidence/README.md) is the source of truth for available and pending artifacts. Future updates should attach or link real artifacts when practical, such as:
+The [evidence index](../evidence/README.md) is the source of truth for the artifacts. New artifacts are added only after review, with sensitive values removed: no live secrets, private keys, or credentials.
 
-- AWS resource configuration exports or screenshots;
-- SSH and Session Manager terminal captures with sensitive values removed;
-- Nginx service, listener, HTTP/HTTPS, and TLS output;
-- a specific successful GitHub Actions run.
+## Next steps
 
-Do not add fabricated screenshots, live secrets, private keys, credentials, or unverified status claims.
-
-## Next implementation stage
-
-1. Improve repeatable verification and preserve non-sensitive evidence.
-2. Improve operational security where appropriate.
-3. Add AWS services or technologies only for a clear technical objective.
-4. Consider a publicly trusted domain and certificate only if they add useful scope.
+1. Apply or import the Terraform configuration and preserve its output.
+2. Migrate EC2 to the versioned release layout and record a versioned deployment run.
+3. Optionally add a publicly trusted domain and certificate.

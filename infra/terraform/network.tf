@@ -14,6 +14,13 @@ resource "aws_subnet" "public_a" {
   availability_zone       = local.availability_zone
   map_public_ip_on_launch = true
 
+  lifecycle {
+    precondition {
+      condition     = contains(data.aws_availability_zones.available.names, local.availability_zone)
+      error_message = "availability_zone must be an available Availability Zone in the selected aws_region."
+    }
+  }
+
   tags = {
     Name = "${local.name_prefix}-public-a"
     Tier = "public"

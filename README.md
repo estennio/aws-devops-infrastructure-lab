@@ -1,5 +1,7 @@
 # AWS DevOps Infrastructure Lab
 
+[![Validate](https://github.com/estennio/aws-devops-infrastructure-lab/actions/workflows/validate.yml/badge.svg)](https://github.com/estennio/aws-devops-infrastructure-lab/actions/workflows/validate.yml)
+
 Hands-on AWS/DevOps laboratory: a static website served by Nginx on an Ubuntu EC2 instance inside a custom VPC, with HTTPS/TLS 1.3, Session Manager administration, automated GitHub Actions delivery, versioned releases with rollback, and Terraform for the minimum infrastructure.
 
 ## Highlights

@@ -46,7 +46,8 @@ validate_release_files() {
 atomic_link() {
     local target="$1"
     local link_path="$2"
-    local temporary_link="${DEPLOY_ROOT}/.$(basename "${link_path}").${BASHPID}"
+    local temporary_link
+    temporary_link="${DEPLOY_ROOT}/.$(basename "${link_path}").${BASHPID}"
 
     rm -f -- "${temporary_link}"
     ln -s -- "${target}" "${temporary_link}"

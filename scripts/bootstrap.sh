@@ -3,8 +3,10 @@
 set -Eeuo pipefail
 
 readonly SERVER_NAME="web.lab.test"
-readonly SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-readonly REPO_ROOT="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+readonly SCRIPT_DIR
+REPO_ROOT="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
+readonly REPO_ROOT
 readonly WEB_ROOT="/var/www/html"
 readonly SITE_AVAILABLE="/etc/nginx/sites-available/${SERVER_NAME}.conf"
 readonly SITE_ENABLED="/etc/nginx/sites-enabled/${SERVER_NAME}.conf"

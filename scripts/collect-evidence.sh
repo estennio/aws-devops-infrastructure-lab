@@ -5,9 +5,12 @@ umask 077
 
 readonly SERVER_NAME="web.lab.test"
 readonly TLS_CERT="/etc/nginx/ssl/${SERVER_NAME}/${SERVER_NAME}.crt"
-readonly SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-readonly REPO_ROOT="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
-readonly RUN_ID="$(date -u +%Y%m%dT%H%M%SZ)"
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+readonly SCRIPT_DIR
+REPO_ROOT="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
+readonly REPO_ROOT
+RUN_ID="$(date -u +%Y%m%dT%H%M%SZ)"
+readonly RUN_ID
 readonly DEFAULT_OUTPUT="${REPO_ROOT}/evidence/artifacts/server-${RUN_ID}.txt"
 readonly OUTPUT_FILE="${1:-${DEFAULT_OUTPUT}}"
 CHECK_FAILURES=0

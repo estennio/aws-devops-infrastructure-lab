@@ -36,7 +36,7 @@ Artifacts never include credentials, session tokens, private keys, secret values
 | Nginx TLS configuration | HTTPS server block | [`tls/06-nginx-tls-config.png`](artifacts/tls/06-nginx-tls-config.png) | Available |
 | GitHub Actions | Completed run for `Deploy website to EC2`; it verifies only the steps implemented by that workflow | [Run 37144567040](https://github.com/estennio/aws-devops-infrastructure-lab/actions/runs/37144567040), commit `c83425515b175a0dc70bd9a6afd9e52b03933014` | Available |
 | Local HTTP/HTTPS, service state, `nginx -t` | Collector output with exit statuses | Run [`scripts/collect-evidence.sh`](../scripts/collect-evidence.sh) on the server; results are transcribed in the verification document | Recorded |
-| Versioned GitHub Actions deploy | Manual run showing the expected SHA over local and external HTTP/HTTPS, including any rollback result | `.github/workflows/deploy-versioned.yml` | Next stage |
+| Versioned GitHub Actions deploy | Manual run showing the expected SHA over local and external HTTP/HTTPS, and a run that exercises the rollback | See [Versioned deployment and rollback evidence](#versioned-deployment-and-rollback-evidence) | Next stage |
 | Terraform | Plan and apply (or import) output | `infra/terraform/` | Next stage |
 
 ## Verified GitHub Actions links
@@ -54,6 +54,34 @@ The following successful runs were verified through the repository's public GitH
 | 2026-10-01 15:25:57 | `workflow_dispatch` | `bf37106261cebdb992c87719b6d2a0f211542d4f` | [36884204089](https://github.com/estennio/aws-devops-infrastructure-lab/actions/runs/36884204089) |
 
 Public API source: [workflow runs](https://api.github.com/repos/estennio/aws-devops-infrastructure-lab/actions/runs?per_page=100).
+
+## Versioned deployment and rollback evidence
+
+These artifacts are produced by migrating the server with `scripts/prepare-versioned-deploy.sh` (see [Versioned Deployment and Rollback](../docs/05-versioned-deployment.md)) and then dispatching **Deploy versioned website to EC2** twice. The second run uses the `simulate_validation_failure` input, which forces the external validation to fail on purpose after activation so that the automatic rollback runs. The simulated failure is announced in the job log as `SIMULATED FAILURE`; it is not a real outage and must be described as a rollback test.
+
+Fill each row only with a reviewed artifact. Redact account and session identifiers and any public IP address. Do not capture secret values.
+
+| # | Evidence | File or link | Status |
+|---|---|---|---|
+| 1 | Server migration: `prepare-versioned-deploy.sh` completing, and `readlink -f .../current` | `artifacts/deployment/01-migration.png` | Next stage |
+| 2 | `VERSION` served over HTTP/HTTPS **before** the successful run (the `legacy-...` value) | `artifacts/deployment/02-version-before.png` | Next stage |
+| 3 | Successful run: workflow run page with all steps green | Run link: _pending_ | Next stage |
+| 4 | Successful run: log of the activation and external validation steps showing the SHA | `artifacts/deployment/03-success-run-log.png` | Next stage |
+| 5 | `VERSION` served **after** the successful run, equal to the run's commit SHA | `artifacts/deployment/04-version-after-success.png` | Next stage |
+| 6 | Rollback run (`simulate_validation_failure=true`): run page with the failed job | Run link: _pending_ | Next stage |
+| 7 | Rollback run: log showing `SIMULATED FAILURE` and the rollback output (`Rolled back from ... to ...`) | `artifacts/deployment/05-rollback-run-log.png` | Next stage |
+| 8 | `VERSION` served **after** the rollback, equal to the previous release again | `artifacts/deployment/06-version-after-rollback.png` | Next stage |
+| 9 | Server state after rollback: `current` and `previous` targets | `artifacts/deployment/07-links-after-rollback.png` | Next stage |
+
+Commands for the `VERSION` captures (PowerShell, from a client that can reach the server; use the temporary public IPv4 without committing it):
+
+```powershell
+$PublicIp = '<public-ip>'
+curl.exe --noproxy '*' "http://$PublicIp/VERSION"
+curl.exe --noproxy '*' --insecure --resolve "web.lab.test:443:$PublicIp" https://web.lab.test/VERSION
+```
+
+The HTTPS command uses `--insecure`; it is transport evidence only and does not validate certificate trust.
 
 ## Server collection
 

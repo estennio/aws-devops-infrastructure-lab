@@ -2,6 +2,11 @@ name: Deploy versioned website to EC2
 
 on:
   workflow_dispatch:
+    inputs:
+      simulate_validation_failure:
+        description: "Deliberately fail external validation after activation to exercise the rollback path"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -83,6 +88,7 @@ jobs:
           EC2_HOST: ${{ secrets.EC2_HOST }}
           EC2_USER: ${{ secrets.EC2_USER }}
           DEPLOY_SHA: ${{ github.sha }}
+          SIMULATE_FAILURE: ${{ inputs.simulate_validation_failure }}
         run: |
           set -euo pipefail
 
@@ -127,8 +133,14 @@ jobs:
           }
 
           set +e
-          validate_external
-          validation_status=$?
+          if [[ "${SIMULATE_FAILURE}" == "true" ]]; then
+            echo "::warning::SIMULATED FAILURE: simulate_validation_failure=true, so external validation is forced to fail on purpose to exercise the rollback."
+            echo "SIMULATED FAILURE: the release is active and healthy; no real validation error occurred." >&2
+            validation_status=1
+          else
+            validate_external
+            validation_status=$?
+          fi
           set -e
 
           if (( validation_status != 0 )); then

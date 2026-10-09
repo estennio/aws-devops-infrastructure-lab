@@ -1,0 +1,98 @@
+﻿name: Validate
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: validate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  terraform:
+    name: Terraform fmt and validate
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra/terraform
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4.2.2
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3.1.2
+        with:
+          terraform_version: 1.11.4
+
+      - name: Check formatting
+        run: terraform fmt -check -recursive
+
+      - name: Initialize without backend
+        run: terraform init -backend=false -input=false
+
+      - name: Validate configuration
+        run: terraform validate
+
+  tflint:
+    name: TFLint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4.2.2
+
+      - name: Set up TFLint
+        uses: terraform-linters/setup-tflint@v4.1.1
+        with:
+          tflint_version: v0.53.0
+
+      - name: Install TFLint plugins
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: tflint --init
+
+      - name: Run TFLint
+        run: tflint --chdir=infra/terraform --recursive --format compact
+
+  shellcheck:
+    name: ShellCheck
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4.2.2
+
+      - name: Lint shell scripts
+        run: shellcheck scripts/*.sh
+
+      # The .tftpl file is not valid shell as written: Terraform escapes ($${VAR})
+      # and interpolates (${name}) it. Render it with placeholder values first.
+      - name: Lint rendered user-data template
+        run: |
+          set -euo pipefail
+          rendered="$(mktemp)"
+          sed -e 's/\$\${/${/g' \
+              -e "s/'\${repository_url}'/'https:\/\/example.invalid\/repo.git'/" \
+              -e "s/'\${repository_ref}'/'main'/" \
+              infra/terraform/templates/user-data.sh.tftpl > "${rendered}"
+          shellcheck "${rendered}"
+
+  security:
+    name: Terraform security scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4.2.2
+
+      - name: Run Trivy config scan
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: config
+          scan-ref: infra/terraform
+          severity: LOW,MEDIUM,HIGH,CRITICAL
+          exit-code: "1"

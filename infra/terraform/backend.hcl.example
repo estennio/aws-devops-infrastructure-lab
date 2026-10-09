@@ -1,0 +1,2 @@
+# Copy to backend.hcl (ignored by Git) and use the bucket created in ../bootstrap.
+bucket = "REPLACE-WITH-THE-STATE-BUCKET-NAME"

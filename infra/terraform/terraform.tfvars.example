@@ -1,10 +1,10 @@
-# Fixed laboratory scope. These values already match the defaults.
+# Laboratory defaults. Each value is validated for format and sane limits, not pinned.
 aws_region         = "us-east-2"
 vpc_cidr           = "10.20.0.0/16"
 public_subnet_cidr = "10.20.1.0/24"
-instance_type      = "t3.micro"
+instance_type      = "t3.micro" # t3 or t3a, nano to medium
 
-# Optional. Null selects the first available Availability Zone in us-east-2.
+# Optional. Null selects the first available Availability Zone in aws_region.
 availability_zone = null
 
 # SSM-only administration is the secure default.

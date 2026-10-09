@@ -1,58 +1,77 @@
 variable "aws_region" {
-  description = "AWS Region for the laboratory. This configuration is intentionally scoped to us-east-2."
+  description = "AWS Region for the laboratory. The remote state backend region in versions.tf is configured separately."
   type        = string
   default     = "us-east-2"
 
   validation {
-    condition     = var.aws_region == "us-east-2"
-    error_message = "aws_region must remain us-east-2 for this laboratory."
+    condition     = can(regex("^[a-z]{2}(-[a-z]+)+-[0-9]$", var.aws_region))
+    error_message = "aws_region must be a valid AWS Region name such as us-east-2."
   }
 }
 
 variable "vpc_cidr" {
-  description = "IPv4 CIDR for the laboratory VPC."
+  description = "IPv4 CIDR for the laboratory VPC. AWS allows prefixes between /16 and /28."
   type        = string
   default     = "10.20.0.0/16"
 
   validation {
-    condition     = var.vpc_cidr == "10.20.0.0/16"
-    error_message = "vpc_cidr must remain 10.20.0.0/16 for this laboratory."
+    condition = (
+      can(cidrhost(var.vpc_cidr, 0)) &&
+      try(tonumber(split("/", var.vpc_cidr)[1]) >= 16 && tonumber(split("/", var.vpc_cidr)[1]) <= 28, false) &&
+      cidrhost(var.vpc_cidr, 0) == split("/", var.vpc_cidr)[0]
+    )
+    error_message = "vpc_cidr must be a valid IPv4 network address in CIDR notation with a prefix between /16 and /28."
   }
 }
 
 variable "public_subnet_cidr" {
-  description = "IPv4 CIDR for Public Subnet A."
+  description = "IPv4 CIDR for Public Subnet A. It must be contained in vpc_cidr."
   type        = string
   default     = "10.20.1.0/24"
 
   validation {
-    condition     = var.public_subnet_cidr == "10.20.1.0/24"
-    error_message = "public_subnet_cidr must remain 10.20.1.0/24 for this laboratory."
+    condition = (
+      can(cidrhost(var.public_subnet_cidr, 0)) &&
+      try(tonumber(split("/", var.public_subnet_cidr)[1]) >= 16 && tonumber(split("/", var.public_subnet_cidr)[1]) <= 28, false) &&
+      cidrhost(var.public_subnet_cidr, 0) == split("/", var.public_subnet_cidr)[0]
+    )
+    error_message = "public_subnet_cidr must be a valid IPv4 network address in CIDR notation with a prefix between /16 and /28."
+  }
+
+  validation {
+    # The subnet is inside the VPC when it is at least as specific and its
+    # network address, truncated to the VPC prefix, equals the VPC network.
+    condition = try(
+      tonumber(split("/", var.public_subnet_cidr)[1]) >= tonumber(split("/", var.vpc_cidr)[1]) &&
+      cidrhost("${split("/", var.public_subnet_cidr)[0]}/${split("/", var.vpc_cidr)[1]}", 0) == cidrhost(var.vpc_cidr, 0),
+      false
+    )
+    error_message = "public_subnet_cidr must be contained in vpc_cidr."
   }
 }
 
 variable "availability_zone" {
-  description = "Optional Availability Zone. When null, Terraform selects the first available zone returned for us-east-2."
+  description = "Optional Availability Zone in aws_region. When null, Terraform selects the first available zone returned for the Region."
   type        = string
   default     = null
   nullable    = true
 
   validation {
     condition = var.availability_zone == null ? true : can(
-      regex("^us-east-2[a-z]$", var.availability_zone)
+      regex("^${var.aws_region}[a-z]$", var.availability_zone)
     )
-    error_message = "availability_zone must be null or an Availability Zone name in us-east-2."
+    error_message = "availability_zone must be null or an Availability Zone name in the selected aws_region."
   }
 }
 
 variable "instance_type" {
-  description = "EC2 instance type for the web server."
+  description = "EC2 instance type for the web server. Restricted to low-cost burstable x86_64 families (t3, t3a) to avoid accidental spend. Graviton (t4g) is excluded because ubuntu_ami_ssm_parameter resolves an amd64 image."
   type        = string
   default     = "t3.micro"
 
   validation {
-    condition     = var.instance_type == "t3.micro"
-    error_message = "instance_type must remain t3.micro for this laboratory."
+    condition     = can(regex("^t3a?[.](nano|micro|small|medium)$", var.instance_type))
+    error_message = "instance_type must be a t3 or t3a size from nano to medium."
   }
 }
 

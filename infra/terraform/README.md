@@ -11,7 +11,7 @@ The configuration does not create credentials, access keys, private keys, an EC2
 - Public Subnet A `10.20.1.0/24`;
 - Internet Gateway, public route table, and default route through the IGW;
 - Security Group for HTTP, HTTPS, and optional restricted SSH;
-- one `t3.micro` EC2 instance using Ubuntu Server 24.04 LTS;
+- one `t3.micro` EC2 instance by default (`instance_type`: t3 or t3a, nano to medium; t4g is excluded because the AMI parameter is amd64) using Ubuntu Server 24.04 LTS;
 - IAM role and instance profile with `AmazonSSMManagedInstanceCore`.
 
 The AMI ID is not hard-coded. Terraform reads Canonical's public Systems Manager parameter for the current Ubuntu Server 24.04 LTS (`noble`) amd64 EBS gp3 image. Because that alias can advance, the resolved AMI ID is shown in the plan and output.
@@ -35,12 +35,12 @@ The AMI ID is not hard-coded. Terraform reads Canonical's public Systems Manager
 
 For a new environment, decide before planning:
 
-- `availability_zone`: optional; `null` selects the first available zone returned in `us-east-2`;
+- `availability_zone`: optional; `null` selects the first available zone returned in `aws_region`, and an explicit value must belong to that Region;
 - `bootstrap_repository_ref`: `main` is convenient, but an immutable commit SHA is recommended for repeatability;
 - `web_ingress_cidrs`: defaults to public HTTP/HTTPS access (`0.0.0.0/0`);
 - `enable_ssh`: defaults to `false`, leaving administration to SSM;
 - `ssh_ingress_cidrs`: mandatory when SSH is enabled and must never contain `0.0.0.0/0`;
-- `ec2_key_name`: mandatory when SSH is enabled and must name a key pair that already exists in `us-east-2`.
+- `ec2_key_name`: mandatory when SSH is enabled and must name a key pair that already exists in `aws_region`.
 
 Terraform never creates or reads an SSH private key. With `enable_ssh=false`, no TCP/22 ingress rule or key-pair association is configured.
 

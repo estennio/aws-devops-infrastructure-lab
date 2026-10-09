@@ -1,0 +1,139 @@
+name: Deploy versioned website via SSM
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: aws-devops-ec2-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy and validate commit release
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # The AWS role trusts only this environment. Configure required reviewers and
+    # restrict deployment branches to main on the environment in GitHub settings.
+    environment: production
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      RELEASE_BUCKET: ${{ vars.RELEASE_BUCKET }}
+      EC2_INSTANCE_ID: ${{ vars.EC2_INSTANCE_ID }}
+      EC2_HOST: ${{ vars.EC2_HOST }}
+      DEPLOY_SHA: ${{ github.sha }}
+
+    steps:
+      - name: Checkout workflow commit
+        uses: actions/checkout@v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4.0.2
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          role-session-name: github-deploy-${{ github.run_id }}
+
+      - name: Package and upload release to S3
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          release_dir="$RUNNER_TEMP/release"
+          install -d -m 0755 -- "$release_dir"
+          cp index.html style.css "$release_dir/"
+          printf '%s\n' "$DEPLOY_SHA" > "$release_dir/VERSION"
+
+          aws s3 cp --only-show-errors --recursive \
+            "$release_dir/" "s3://${RELEASE_BUCKET}/releases/${DEPLOY_SHA}/"
+
+      - name: Download and activate release on EC2 via SSM
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Runs as root on the instance; the script interface is unchanged.
+          remote_script="$(cat <<REMOTE
+          #!/bin/bash
+          set -Eeuo pipefail
+          staging_dir="/tmp/aws-devops-site/${DEPLOY_SHA}"
+          command -v aws > /dev/null || snap install aws-cli --classic
+          rm -rf -- "\${staging_dir}"
+          install -d -m 0755 -- "\${staging_dir}"
+          aws s3 cp --only-show-errors --region "${AWS_REGION}" --recursive \
+            "s3://${RELEASE_BUCKET}/releases/${DEPLOY_SHA}/" "\${staging_dir}/"
+          /usr/local/sbin/aws-devops-versioned-deploy activate "${DEPLOY_SHA}" "\${staging_dir}"
+          rm -rf -- "\${staging_dir}"
+          REMOTE
+          )"
+
+          bash scripts/ssm-run.sh "$EC2_INSTANCE_ID" "$AWS_REGION" \
+            "Activate release ${DEPLOY_SHA}" "$remote_script"
+
+      - name: Validate served release externally
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          validate_external() {
+            local http_sha
+            local https_sha
+
+            curl --fail --silent --show-error \
+              --noproxy '*' \
+              --connect-timeout 10 --max-time 30 \
+              --connect-to "web.lab.test:80:${EC2_HOST}:80" \
+              http://web.lab.test/index.html > /dev/null || return
+            curl --fail --silent --show-error \
+              --noproxy '*' \
+              --connect-timeout 10 --max-time 30 \
+              --connect-to "web.lab.test:80:${EC2_HOST}:80" \
+              http://web.lab.test/style.css > /dev/null || return
+            http_sha="$(curl --fail --silent --show-error \
+              --noproxy '*' \
+              --connect-timeout 10 --max-time 30 \
+              --connect-to "web.lab.test:80:${EC2_HOST}:80" \
+              http://web.lab.test/VERSION)" || return
+            [[ "$http_sha" == "$DEPLOY_SHA" ]] || return
+
+            echo "HTTPS reachability uses --insecure for the laboratory certificate; this does not validate certificate trust."
+            curl --insecure --fail --silent --show-error \
+              --noproxy '*' \
+              --connect-timeout 10 --max-time 30 \
+              --connect-to "web.lab.test:443:${EC2_HOST}:443" \
+              https://web.lab.test/index.html > /dev/null || return
+            curl --insecure --fail --silent --show-error \
+              --noproxy '*' \
+              --connect-timeout 10 --max-time 30 \
+              --connect-to "web.lab.test:443:${EC2_HOST}:443" \
+              https://web.lab.test/style.css > /dev/null || return
+            https_sha="$(curl --insecure --fail --silent --show-error \
+              --noproxy '*' \
+              --connect-timeout 10 --max-time 30 \
+              --connect-to "web.lab.test:443:${EC2_HOST}:443" \
+              https://web.lab.test/VERSION)" || return
+            [[ "$https_sha" == "$DEPLOY_SHA" ]] || return
+          }
+
+          set +e
+          validate_external
+          validation_status=$?
+          set -e
+
+          if (( validation_status != 0 )); then
+            echo "External validation failed; requesting rollback on EC2 via SSM." >&2
+            bash scripts/ssm-run.sh "$EC2_INSTANCE_ID" "$AWS_REGION" \
+              "Rollback release ${DEPLOY_SHA}" \
+              "/usr/local/sbin/aws-devops-versioned-deploy rollback ${DEPLOY_SHA}" || \
+              echo "Rollback command also failed; inspect the server immediately." >&2
+            exit "$validation_status"
+          fi
+
+          echo "External HTTP and HTTPS transport checks serve commit $DEPLOY_SHA."

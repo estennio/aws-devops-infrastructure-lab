@@ -92,3 +92,13 @@ output "ssh_target" {
   description = "SSH target when SSH is enabled; null for SSM-only administration."
   value       = var.enable_ssh ? "ubuntu@${aws_instance.web.public_dns}" : null
 }
+
+output "github_actions_role_arn" {
+  description = "ARN of the IAM role assumed by GitHub Actions through OIDC. Store it as the AWS_ROLE_ARN repository variable."
+  value       = aws_iam_role.github_actions.arn
+}
+
+output "release_bucket_name" {
+  description = "Name of the release artifact bucket. Store it as the RELEASE_BUCKET repository variable."
+  value       = aws_s3_bucket.releases.id
+}

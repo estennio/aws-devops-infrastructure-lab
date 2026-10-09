@@ -7,7 +7,7 @@ This directory tracks the verifiable artifacts of the AWS DevOps Infrastructure 
 Statuses:
 
 - **Available:** a reviewed artifact or public link is present and can be inspected;
-- **Recorded:** the result is transcribed in [Deployment and Verification](../docs/03-deployment-and-verification.md); a raw capture can be produced with the collector below;
+- **Recorded:** the result is transcribed in [Deployment and Verification](../docs/02-deployment-and-verification.md); a raw capture can be produced with the collector below;
 - **Next stage:** the artifact is produced when the corresponding step is performed.
 
 Artifacts never include credentials, session tokens, private keys, secret values, full environment dumps, instance metadata credentials, or unredacted sensitive console content. Public certificate properties are allowed; certificate private keys are not. Account and session identifiers in screenshots are redacted.
@@ -36,7 +36,8 @@ Artifacts never include credentials, session tokens, private keys, secret values
 | Nginx TLS configuration | HTTPS server block | [`tls/06-nginx-tls-config.png`](artifacts/tls/06-nginx-tls-config.png) | Available |
 | GitHub Actions | Completed run for `Deploy website to EC2`; it verifies only the steps implemented by that workflow | [Run 37144567040](https://github.com/estennio/aws-devops-infrastructure-lab/actions/runs/37144567040), commit `c83425515b175a0dc70bd9a6afd9e52b03933014` | Available |
 | Local HTTP/HTTPS, service state, `nginx -t` | Collector output with exit statuses | Run [`scripts/collect-evidence.sh`](../scripts/collect-evidence.sh) on the server; results are transcribed in the verification document | Recorded |
-| Versioned GitHub Actions deploy | Manual run showing the expected SHA over local and external HTTP/HTTPS, including any rollback result | `.github/workflows/deploy-versioned.yml` | Next stage |
+| OIDC and SSM GitHub Actions deploy | Manual run, S3 upload, SSM output, served SHA, and a rollback test | `.github/workflows/deploy-ssm.yml` | Next stage |
+| Versioned GitHub Actions deploy (SSH) | Manual run showing the expected SHA over local and external HTTP/HTTPS, including any rollback result | `.github/workflows/deploy-versioned.yml` | Next stage |
 | Terraform | Plan, outputs, live HTTP/HTTPS and SSM checks | `infra/terraform/` | [`artifacts/terraform/`](artifacts/terraform/) |
 
 ## Verified GitHub Actions links

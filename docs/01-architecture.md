@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document describes the AWS topology of the laboratory: network, compute, administration, and web delivery. Results come from the verification sessions transcribed in [Deployment and Verification](03-deployment-and-verification.md) and the screenshots in the [evidence index](../evidence/README.md); the topology is not generated from a live AWS inventory.
+This document describes the AWS topology of the laboratory: network, compute, administration, and web delivery. Results come from the verification sessions transcribed in [Deployment and Verification](02-deployment-and-verification.md) and the screenshots in the [evidence index](../evidence/README.md); the topology is not generated from a live AWS inventory.
 
 Content is labeled as:
 
@@ -39,10 +39,13 @@ The public IPv4 used for testing is not recorded as permanent configuration beca
 |---|---|---|
 | VPC, public subnet, Internet Gateway, route table, Security Group | Deployed and verified | Transcribed AWS environment checks |
 | EC2 `lab-web-server` (`t3.micro`) | Deployed and verified | Transcribed instance and OS checks |
-| SSH and Session Manager | Operational | Transcribed SSH, managed-node, and session results |
-| Nginx, HTTP, HTTPS, TLS 1.3 | Operational | Transcribed service, listener, request, and OpenSSL results |
+| Session Manager | Verified on the Terraform-managed instance (`Online`) | [`evidence/artifacts/terraform/04-ssm-online.txt`](../evidence/artifacts/terraform/04-ssm-online.txt); earlier session screenshots from the console-built instance |
+| SSH | Recorded on the earlier console-built instance only; disabled by default in Terraform | Transcribed SSH results |
+| Nginx, HTTP, HTTPS | HTTP and HTTPS `200 OK` verified on the Terraform-managed instance | [`evidence/artifacts/terraform/03-http-https-check.txt`](../evidence/artifacts/terraform/03-http-https-check.txt) |
+| TLS 1.3 and laboratory Root CA certificate | Recorded on the earlier console-built instance; not re-verified on the current one | Transcribed OpenSSL results and TLS screenshots |
 | Static website | Implemented in the repository | `index.html` and `style.css` |
-| GitHub Actions delivery | Implemented; successful runs linked in the evidence index | `.github/workflows/deploy.yml` and the verification record |
+| GitHub Actions delivery over SSH | Implemented; successful runs linked in the evidence index | `.github/workflows/deploy.yml` and the verification record |
+| GitHub Actions delivery over OIDC and SSM | Implemented; no run recorded yet | `.github/workflows/deploy-ssm.yml`, `infra/terraform/github-oidc.tf` |
 | Ubuntu/Nginx bootstrap | Reproducible server configuration | `scripts/bootstrap.sh` and `configs/nginx/web.lab.test.conf` |
 | Minimum AWS infrastructure | Terraform configuration for the minimum architecture | `infra/terraform/` |
 
@@ -62,15 +65,15 @@ The verification record reports external `200 OK` responses over HTTP and HTTPS,
 
 ## Administration and security boundary
 
-SSH and Systems Manager Session Manager are recorded as working administration paths. Session Manager did not replace SSH: the deployment workflow still connects over SSH and therefore depends on appropriate network access and GitHub Actions secrets.
+Session Manager is verified on the Terraform-managed instance. SSH was recorded as working on the earlier console-built instance; the Terraform configuration leaves it disabled by default. The legacy deployment workflow still connects over SSH and therefore depends on SSH being enabled and on GitHub Actions secrets. The OIDC and SSM workflow (`deploy-ssm.yml`) is implemented to remove that dependency, but it has no recorded run yet.
 
-The documented application paths use:
+The application paths use:
 
-- TCP 22 for SSH administration and automated delivery;
+- TCP 22 for SSH, only when `enable_ssh` is set in Terraform or on the earlier instance;
 - TCP 80 for HTTP;
 - TCP 443 for HTTPS/TLS.
 
-The repository does not include Security Group rules, IAM policies, generated certificates, private keys, or GitHub Actions secret values. The Nginx configuration and bootstrap are documented in [Server Bootstrap](04-server-bootstrap.md); they are a reproducible configuration and not an export of the active EC2 server. The laboratory certificate is not publicly trusted.
+The repository does not include Security Group rules, IAM policies, generated certificates, private keys, or GitHub Actions secret values. The Nginx configuration and bootstrap are documented in [Server Bootstrap](03-server-bootstrap.md); they are a reproducible configuration and not an export of the active EC2 server. The laboratory certificate is not publicly trusted.
 
 ## Scope decisions
 

@@ -1,0 +1,82 @@
+# Repository Guide
+
+This guide holds the repository inventory that is not in the README: files, layout, the legacy SSH pipeline, and the security, cost and scope notes.
+
+## What is in the repository
+
+| Artifact | Purpose |
+|---|---|
+| `index.html`, `style.css` | Static portfolio page describing the lab, responsive and dependency-free. |
+| `.github/workflows/validate.yml` | PR and `main` validation: `terraform fmt`/`validate` on `infra/terraform` and `infra/bootstrap`, TFLint, ShellCheck, and a Trivy config scan. |
+| `.github/workflows/deploy-ssm.yml` | Manual deployment through GitHub OIDC, S3 and SSM Run Command, with validation and rollback. Implemented; no run recorded yet. |
+| `.github/workflows/deploy.yml` | Legacy deployment to EC2 over SSH on relevant pushes to `main` or manual dispatch. |
+| `.github/workflows/deploy-versioned.yml` | Legacy manual SHA-addressed deployment over SSH with atomic activation, validation, and rollback. |
+| `configs/nginx/web.lab.test.conf` | HTTP/HTTPS virtual host serving `/var/www/html` with TLS 1.2/1.3. |
+| `configs/nginx/web.lab.test.versioned.conf` | Virtual host serving the atomic `current` release link. |
+| `scripts/bootstrap.sh` | Idempotent Ubuntu 24.04 bootstrap: Nginx, site files, and certificate. |
+| `scripts/prepare-versioned-deploy.sh`, `scripts/versioned-deploy.sh` | Server migration to the release layout, plus release activation and rollback. |
+| `scripts/ssm-run.sh` | Sends a script through SSM Run Command, waits, prints stdout and stderr, and fails on a non-success status. |
+| `scripts/collect-evidence.sh` | Collector for non-sensitive operational evidence with per-check exit statuses. |
+| `infra/bootstrap/` | Terraform for the S3 state bucket (local state). |
+| `infra/terraform/` | Terraform for the VPC, EC2, IAM, release bucket and OIDC deploy role. |
+| `evidence/` | Evidence index and curated artifacts. |
+
+## Repository structure
+
+```text
+.
+|-- .github/workflows/
+|   |-- deploy-ssm.yml
+|   |-- deploy-versioned.yml
+|   |-- deploy.yml
+|   `-- validate.yml
+|-- configs/nginx/
+|-- docs/
+|   |-- 01-architecture.md
+|   |-- 02-deployment-and-verification.md
+|   |-- 03-server-bootstrap.md
+|   |-- 04-versioned-deployment.md
+|   `-- 05-repository-guide.md
+|-- evidence/
+|   |-- README.md
+|   `-- artifacts/
+|-- infra/
+|   |-- bootstrap/
+|   `-- terraform/
+|-- scripts/
+|-- README.md
+|-- index.html
+`-- style.css
+```
+
+## Legacy SSH deployment pipeline
+
+`deploy.yml`:
+
+1. reads the SSH key, host key, host, and user from GitHub Actions secrets;
+2. uploads `index.html` and `style.css` with `scp` to a temporary directory;
+3. installs them under `/var/www/html`;
+4. runs `nginx -t`, reloads Nginx, and requests `http://127.0.0.1/` with `curl -fsS`.
+
+The final request confirms that the local HTTP endpoint answers without an HTTP error. The workflow does not search the response for a specific phrase and does not test the external endpoint, HTTPS, or the contents of `style.css`.
+
+`deploy-versioned.yml` publishes complete releases by commit SHA, switches a symbolic link atomically, compares the served `VERSION` with the workflow SHA, validates local and external HTTP/HTTPS transport, and rolls back on failure. It is manual-only and targets the layout described in [Versioned Deployment and Rollback](04-versioned-deployment.md).
+
+All three deploy workflows share one concurrency group with in-progress cancellation disabled, so EC2 deployments never overlap or interrupt a running deployment. The OIDC and SSM path is described in [`infra/terraform/README.md`](../infra/terraform/README.md).
+
+## Security and cost
+
+- No EC2 private key, AWS credential, password, token, workflow secret, or certificate private material is committed. State, saved plans, local variable files, and certificates are excluded by `.gitignore`.
+- The legacy SSH deployment requires an allowed SSH path from the runner to the instance. Terraform leaves SSH disabled by default.
+- The certificate is issued by a laboratory CA and is intended for laboratory verification, not public trust.
+- The design avoids NAT Gateway, Load Balancer, RDS, and additional instances to keep the laboratory inexpensive.
+
+## Scope and limits
+
+This is a single-instance laboratory, and the documentation distinguishes three kinds of content:
+
+| Category | Meaning |
+|---|---|
+| Implemented in the repository | Files that can be inspected here: site, workflows, Nginx configuration, scripts, evidence collector, and Terraform. |
+| Recorded verification | Results observed in the AWS/EC2 environment, transcribed in [Deployment and Verification](02-deployment-and-verification.md) and supported by the [evidence index](../evidence/README.md). They are a record, not a live check. |
+| Scope decisions | Components intentionally left out: additional subnets and Availability Zones, NAT Gateway, RDS, Load Balancer and Auto Scaling, ECS/EKS, and Docker. |

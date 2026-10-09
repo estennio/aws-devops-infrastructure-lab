@@ -130,11 +130,10 @@ resource "aws_iam_role_policy" "ec2_read_releases" {
   policy = data.aws_iam_policy_document.ec2_read_releases.json
 }
 
-# Release artifacts are short-lived build outputs; the lab intentionally skips
-# access logging, versioning and a customer-managed KMS key to stay in scope.
+# AWS-0089: access logging would require a second bucket; the bucket holds public site files that are also in git, and CloudTrail covers API activity.
+# AWS-0090: versioning is unnecessary; releases are keyed by commit SHA, never overwritten, and expire through the lifecycle rule.
 #trivy:ignore:AVD-AWS-0089
 #trivy:ignore:AVD-AWS-0090
-#trivy:ignore:AVD-AWS-0132
 resource "aws_s3_bucket" "releases" {
   bucket = local.release_bucket_name
 
@@ -160,6 +159,8 @@ resource "aws_s3_bucket_public_access_block" "releases" {
   restrict_public_buckets = true
 }
 
+# AWS-0132: releases use SSE-S3 (AES256); a customer-managed KMS key adds cost without benefit for a single-user lab.
+#trivy:ignore:AVD-AWS-0132
 resource "aws_s3_bucket_server_side_encryption_configuration" "releases" {
   bucket = aws_s3_bucket.releases.id
 

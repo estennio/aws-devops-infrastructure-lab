@@ -11,7 +11,7 @@ Supporting screenshots are committed under `evidence/artifacts/` and workflow ru
 - AWS Region: `us-east-2`
 - VPC: `10.20.0.0/16`
 - Public Subnet A: `10.20.1.0/24`
-- EC2 instance: `lab-web-server` (`i-08f84a35805b6b66d`), `t3.micro`
+- EC2 instance: `lab-web-server` (`i-041c6cfc9e5181d4c`), `t3.micro`, managed by Terraform (replaced the earlier console-created instance)
 - OS: Ubuntu Server 24.04 LTS
 - Web server: Nginx
 - Administration: SSH and AWS Systems Manager Session Manager
@@ -155,7 +155,7 @@ The repository also contains the separate `Deploy versioned website to EC2` work
 | EC2, Ubuntu 24.04 LTS, and SSM IAM profile | Terraform configuration | Deployed and verified; screenshots committed |
 | SSH and Session Manager | Operated through the console and client | Successful access and service state recorded; screenshots committed |
 | Nginx, HTTP, HTTPS, TLS 1.3 | Reproducible bootstrap and configuration | Service, requests, listeners, and TLS recorded; screenshots committed |
-| Terraform / infrastructure-as-code | Minimum configuration in `infra/terraform/` | Apply or import with preserved output is the next stage |
+| Terraform / infrastructure-as-code | Minimum configuration in `infra/terraform/` | Applied from scratch (14 resources); plan, outputs, and live checks in `evidence/artifacts/terraform/` |
 | RDS, NAT Gateway, Load Balancer, Auto Scaling, ECS/EKS, Docker | Outside the laboratory scope | Not applicable |
 
 ## Evidence
@@ -164,6 +164,5 @@ The [evidence index](../evidence/README.md) is the source of truth for the artif
 
 ## Next steps
 
-1. Apply or import the Terraform configuration and preserve its output.
-2. Migrate EC2 to the versioned release layout and record a versioned deployment run.
-3. Optionally add a publicly trusted domain and certificate.
+1. Migrate EC2 to the versioned release layout and record a versioned deployment run.
+2. Optionally add a publicly trusted domain and certificate.

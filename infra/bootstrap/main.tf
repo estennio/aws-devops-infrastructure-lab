@@ -1,3 +1,5 @@
+# AWS-0089: access logging would require a second bucket; access is limited to one IAM user and CloudTrail covers API activity.
+#trivy:ignore:AVD-AWS-0089
 resource "aws_s3_bucket" "state" {
   bucket = var.state_bucket_name
 
@@ -14,6 +16,8 @@ resource "aws_s3_bucket_versioning" "state" {
   }
 }
 
+# AWS-0132: state bucket uses SSE-S3 (AES256); a customer-managed KMS key adds cost without benefit for a single-user lab.
+#trivy:ignore:AVD-AWS-0132
 resource "aws_s3_bucket_server_side_encryption_configuration" "state" {
   bucket = aws_s3_bucket.state.id
 

@@ -28,6 +28,7 @@ The AMI ID is not hard-coded. Terraform reads Canonical's public Systems Manager
 | `security.tf` | Security Group and independently managed ingress/egress rules. |
 | `iam.tf` | SSM IAM role, managed-policy attachment, and instance profile. |
 | `compute.tf` | EC2, IMDSv2, encrypted gp3 root volume, and optional bootstrap user data. |
+| `github-oidc.tf` | GitHub OIDC provider, least-privilege deploy role, and the private release artifact bucket. |
 | `outputs.tf` | Non-secret resource IDs, endpoints, and SSM session command. |
 | `terraform.tfvars.example` | Non-sensitive starting values. Real `.tfvars` files are ignored. |
 
@@ -84,6 +85,52 @@ State is stored in an S3 bucket with native S3 locking (`use_lockfile = true`, n
 CI validates the configuration with `terraform init -backend=false`, so it needs neither the bucket nor AWS credentials.
 
 Commit `.terraform.lock.hcl` after the first successful `terraform init` so provider selections are reproducible. Do not commit `.terraform/`.
+
+## Keyless deployment from GitHub Actions (OIDC + SSM)
+
+`github-oidc.tf` lets `.github/workflows/deploy-ssm.yml` deploy without an AWS access key and without opening TCP/22 to GitHub runners:
+
+1. The workflow requests an OIDC token and assumes the `github-actions` role (`sts:AssumeRoleWithWebIdentity`).
+2. It uploads `index.html`, `style.css`, and `VERSION` to `s3://<release bucket>/releases/<sha>/`.
+3. It sends an SSM Run Command (`AWS-RunShellScript`) to the instance, which downloads the release and runs the unchanged `/usr/local/sbin/aws-devops-versioned-deploy activate <sha> <dir>`.
+4. It validates HTTP/HTTPS from the runner and, on failure, requests `rollback` through SSM.
+
+### Trust policy
+
+The role trusts only `repo:<github_repository>:environment:<github_environment>` (default `production`) with audience `sts.amazonaws.com`. An environment subject is preferred over `ref:refs/heads/main` because the environment can require reviewers and limit deployments to `main`, so an unreviewed push or a pull request cannot obtain AWS credentials. Configure the `production` environment in GitHub (Settings, Environments) with required reviewers and a `main`-only deployment branch rule.
+
+### Permissions
+
+- GitHub role: `ssm:SendCommand` only on this instance and the `AWS-RunShellScript` document, `ssm:GetCommandInvocation`/`ListCommandInvocations` (no resource-level scoping exists for them), and `s3:PutObject` on the `releases/` prefix.
+- EC2 role: `AmazonSSMManagedInstanceCore` plus read-only access (`s3:GetObject`, prefix-limited `s3:ListBucket`) to `releases/`.
+- The release bucket is private, encrypted (SSE-S3), TLS-only, and expires objects after `release_retention_days` (default 30).
+
+The target instance needs the AWS CLI. The deploy command installs it with `snap install aws-cli --classic` when missing.
+
+An account can hold only one provider for `token.actions.githubusercontent.com`. If it already exists, set `create_github_oidc_provider = false`.
+
+### GitHub configuration
+
+Nothing here is secret. Create these repository (or `production` environment) **variables** from the Terraform outputs:
+
+| Variable | Source |
+|---|---|
+| `AWS_ROLE_ARN` | `terraform output github_actions_role_arn` |
+| `AWS_REGION` | `us-east-2` |
+| `RELEASE_BUCKET` | `terraform output release_bucket_name` |
+| `EC2_INSTANCE_ID` | `terraform output instance_id` |
+| `EC2_HOST` | current public address of the instance (`terraform output`) |
+
+The SSH-based `deploy-versioned.yml` still uses the secrets `EC2_SSH_KEY`, `EC2_KNOWN_HOSTS`, `EC2_HOST`, and `EC2_USER`. Keep them until the SSM path is validated.
+
+### Validate before removing the SSH path
+
+1. Review `terraform plan` and apply it deliberately; confirm the instance appears as an `Online` SSM managed node.
+2. Create the `production` environment and the variables above.
+3. Run **Deploy versioned website via SSM** manually and confirm the S3 upload, the SSM output in the log, and the served `VERSION`.
+4. Test the failure path: deploy a release that fails external validation (for example, stop Nginx temporarily) and confirm that rollback is requested; also confirm that a run from a non-`production` context cannot assume the role.
+5. Run both workflows once with SSH still enabled to compare results, then repeat the SSM run with `enable_ssh = false` (no port 22 rule).
+6. Only then delete `deploy-versioned.yml`, the SSH secrets, and any SSH ingress CIDRs.
 
 ## Create a new environment
 

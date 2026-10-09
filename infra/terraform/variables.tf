@@ -214,3 +214,49 @@ variable "additional_tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "github_repository" {
+  description = "GitHub repository (owner/name) allowed to assume the deployment role through OIDC."
+  type        = string
+  default     = "estennio/aws-devops-infrastructure-lab"
+
+  validation {
+    condition     = can(regex("^[0-9A-Za-z_.-]+/[0-9A-Za-z_.-]+$", var.github_repository))
+    error_message = "github_repository must use the owner/name format."
+  }
+}
+
+variable "github_environment" {
+  description = "GitHub environment whose deployments may assume the role. The OIDC subject is pinned to it."
+  type        = string
+  default     = "production"
+
+  validation {
+    condition     = can(regex("^[0-9A-Za-z_.-]+$", var.github_environment))
+    error_message = "github_environment must be a simple environment name."
+  }
+}
+
+variable "create_github_oidc_provider" {
+  description = "Whether to create the account-wide GitHub OIDC provider. Set to false if token.actions.githubusercontent.com already exists in the account."
+  type        = bool
+  default     = true
+}
+
+variable "release_bucket_name" {
+  description = "Optional name of the release artifact bucket. When null, <project_name>-releases-<account id> is used."
+  type        = string
+  default     = null
+  nullable    = true
+}
+
+variable "release_retention_days" {
+  description = "Days after which release artifacts expire from the release bucket."
+  type        = number
+  default     = 30
+
+  validation {
+    condition     = var.release_retention_days >= 1 && floor(var.release_retention_days) == var.release_retention_days
+    error_message = "release_retention_days must be a whole number of at least 1."
+  }
+}

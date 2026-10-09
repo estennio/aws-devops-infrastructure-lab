@@ -127,10 +127,9 @@ This is a single-instance laboratory, and the documentation distinguishes three 
 | Recorded verification | Results observed in the AWS/EC2 environment, transcribed in [Deployment and Verification](docs/03-deployment-and-verification.md) and supported by the [evidence index](evidence/README.md). They are a record, not a live check. |
 | Scope decisions | Components intentionally left out: additional subnets and Availability Zones, NAT Gateway, RDS, Load Balancer and Auto Scaling, ECS/EKS, and Docker. |
 
-Two operational steps follow the repository work and are tracked as the next stage: running `terraform apply`/import against AWS, and migrating the EC2 instance to the versioned release layout.
+The Terraform configuration was applied from scratch against AWS: the plan created 14 resources, and the instance bootstrap (Nginx, TLS, SSM agent) ran automatically through `user_data`. HTTP, HTTPS, and Session Manager were then verified live; see the [Terraform evidence](evidence/artifacts/terraform/). This replaced the earlier console-created infrastructure. One operational step remains as the next stage: migrating the EC2 instance to the versioned release layout.
 
 ## Next steps
 
-1. Apply (or import) the Terraform configuration and preserve the plan and apply output as evidence.
-2. Migrate EC2 to the versioned layout and record a versioned deployment run.
-3. Optionally add a publicly trusted domain and certificate.
+1. Migrate EC2 to the versioned layout and record a versioned deployment run.
+2. Optionally add a publicly trusted domain and certificate.

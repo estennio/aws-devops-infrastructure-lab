@@ -1,4 +1,4 @@
-﻿name: Validate
+name: Validate
 
 on:
   pull_request:
@@ -17,11 +17,17 @@ concurrency:
 
 jobs:
   terraform:
-    name: Terraform fmt and validate
+    name: Terraform fmt and validate (${{ matrix.dir }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        dir:
+          - infra/terraform
+          - infra/bootstrap
     defaults:
       run:
-        working-directory: infra/terraform
+        working-directory: ${{ matrix.dir }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4.2.2
@@ -93,6 +99,6 @@ jobs:
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: config
-          scan-ref: infra/terraform
+          scan-ref: infra
           severity: LOW,MEDIUM,HIGH,CRITICAL
           exit-code: "1"

@@ -24,7 +24,7 @@ Public Subnet A 10.20.1.0/24
 Security Group
     |
 EC2 lab-web-server
-i-08f84a35805b6b66d / t3.micro / Ubuntu Server 24.04 LTS
+i-041c6cfc9e5181d4c / t3.micro / Ubuntu Server 24.04 LTS
     |-- Administration: SSH and Session Manager
     `-- Nginx
         |-- HTTP :80
@@ -54,7 +54,7 @@ Curated screenshots of the AWS resources, Session Manager, HTTP/HTTPS, and TLS a
 - **VPC:** `10.20.0.0/16`
 - **Public subnet:** `10.20.1.0/24`
 - **Default route:** `0.0.0.0/0` to the Internet Gateway
-- **Instance:** `lab-web-server` (`i-08f84a35805b6b66d`), `t3.micro`
+- **Instance:** `lab-web-server` (`i-041c6cfc9e5181d4c`), `t3.micro`
 - **Operating system:** Ubuntu Server 24.04 LTS
 - **Web server:** Nginx
 
@@ -87,4 +87,4 @@ A natural extension would be a private database tier: private subnets, disabled 
 
 ## Infrastructure as code
 
-The minimum architecture is defined in `infra/terraform/` (see its [README](../infra/terraform/README.md)). Terraform state, saved plans, and apply or import results are not committed; applying the configuration and preserving its output as evidence is the next stage of the lab.
+The minimum architecture is defined in `infra/terraform/` (see its [README](../infra/terraform/README.md)). The configuration was applied from scratch (plan: 14 resources to add) and now manages the infrastructure described here, replacing the instance originally created by hand in the console (`i-08f84a35805b6b66d`). The plan, outputs, live HTTP/HTTPS check, and SSM status are in [`evidence/artifacts/terraform/`](../evidence/artifacts/terraform/); state and tfvars are not committed.

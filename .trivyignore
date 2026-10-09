@@ -5,3 +5,6 @@ AWS-0164
 
 # VPC Flow Logs are out of scope for this single-instance lab (cost).
 AWS-0178
+
+# Open egress is required for package installs, SSM and repository bootstrap.
+AWS-0104

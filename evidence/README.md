@@ -14,31 +14,36 @@ Artifacts never include credentials, session tokens, private keys, secret values
 
 ## Evidence matrix
 
+Rows marked *earlier console-built instance* are screenshots of the infrastructure created by hand in the console, which Terraform has since replaced. They are kept as history. Rows pointing to `artifacts/terraform/` describe the current Terraform-managed instance.
+
 | Component | Evidence | File or link | Status |
 |---|---|---|---|
-| VPC | AWS Console capture of the lab VPC | [`aws/02-vpc.png`](artifacts/aws/02-vpc.png) | Available |
-| Public subnet | Subnet capture | [`aws/03-public-subnet.png`](artifacts/aws/03-public-subnet.png) | Available |
-| Internet Gateway | IGW attached to the lab VPC | [`aws/04-internet-gateway.png`](artifacts/aws/04-internet-gateway.png) | Available |
-| Routes | Route table with the default route | [`aws/05-route-table.png`](artifacts/aws/05-route-table.png) | Available |
-| Security Group | Inbound/outbound rules | [`aws/06-security-group.png`](artifacts/aws/06-security-group.png) | Available |
-| EC2 | Instance details | [`aws/01-ec2-instance.png`](artifacts/aws/01-ec2-instance.png) | Available |
-| IAM role for SSM | Role used by Systems Manager | [`ssm/02-iam-ssm-role.png`](artifacts/ssm/02-iam-ssm-role.png) | Available |
-| SSM managed node | Instance registered and online | [`ssm/01-managed-node.png`](artifacts/ssm/01-managed-node.png) | Available |
-| Session Manager | Session to the instance | [`ssm/03-session-manager.png`](artifacts/ssm/03-session-manager.png) | Available |
-| Nginx | Listeners on TCP 80/443 | [`web/01-nginx-ports.png`](artifacts/web/01-nginx-ports.png) | Available |
-| External HTTP | PowerShell response from the EC2 public endpoint | [`web/02-http-external.png`](artifacts/web/02-http-external.png) | Available |
-| External HTTPS | PowerShell response using `-k` (transport/connectivity evidence only) | [`web/03-https-external.png`](artifacts/web/03-https-external.png) | Available |
-| Laboratory Root CA | Root CA creation | [`tls/01-root-ca.png`](artifacts/tls/01-root-ca.png) | Available |
-| Server certificate | Certificate for `web.lab.test` issued by the laboratory Root CA | [`tls/02-server-cert-issued-by-root-ca.png`](artifacts/tls/02-server-cert-issued-by-root-ca.png) | Available |
-| Certificate chain | `openssl verify` against the Root CA returns `OK` | [`tls/03-root-ca-verify.png`](artifacts/tls/03-root-ca-verify.png) | Available |
-| Certificate SAN | `DNS:web.lab.test` | [`tls/04-server-cert-san.png`](artifacts/tls/04-server-cert-san.png) | Available |
-| TLS 1.3 | Negotiated protocol | [`tls/05-tls13.png`](artifacts/tls/05-tls13.png) | Available |
-| Nginx TLS configuration | HTTPS server block | [`tls/06-nginx-tls-config.png`](artifacts/tls/06-nginx-tls-config.png) | Available |
+| VPC | AWS Console capture of the lab VPC | [`aws/02-vpc.png`](artifacts/aws/02-vpc.png) | Available (earlier console-built instance) |
+| Public subnet | Subnet capture | [`aws/03-public-subnet.png`](artifacts/aws/03-public-subnet.png) | Available (earlier console-built instance) |
+| Internet Gateway | IGW attached to the lab VPC | [`aws/04-internet-gateway.png`](artifacts/aws/04-internet-gateway.png) | Available (earlier console-built instance) |
+| Routes | Route table with the default route | [`aws/05-route-table.png`](artifacts/aws/05-route-table.png) | Available (earlier console-built instance) |
+| Security Group | Inbound/outbound rules | [`aws/06-security-group.png`](artifacts/aws/06-security-group.png) | Available (earlier console-built instance) |
+| EC2 | Instance details | [`aws/01-ec2-instance.png`](artifacts/aws/01-ec2-instance.png) | Available (earlier console-built instance) |
+| IAM role for SSM | Role used by Systems Manager | [`ssm/02-iam-ssm-role.png`](artifacts/ssm/02-iam-ssm-role.png) | Available (earlier console-built instance) |
+| SSM managed node | Instance registered and online | [`ssm/01-managed-node.png`](artifacts/ssm/01-managed-node.png) | Available (earlier console-built instance) |
+| Session Manager | Session to the instance | [`ssm/03-session-manager.png`](artifacts/ssm/03-session-manager.png) | Available (earlier console-built instance) |
+| Nginx | Listeners on TCP 80/443 | [`web/01-nginx-ports.png`](artifacts/web/01-nginx-ports.png) | Available (earlier console-built instance) |
+| External HTTP | PowerShell response from the EC2 public endpoint | [`web/02-http-external.png`](artifacts/web/02-http-external.png) | Available (earlier console-built instance) |
+| External HTTPS | PowerShell response using `-k` (transport/connectivity evidence only) | [`web/03-https-external.png`](artifacts/web/03-https-external.png) | Available (earlier console-built instance) |
+| Laboratory Root CA | Root CA creation | [`tls/01-root-ca.png`](artifacts/tls/01-root-ca.png) | Available (earlier console-built instance) |
+| Server certificate | Certificate for `web.lab.test` issued by the laboratory Root CA | [`tls/02-server-cert-issued-by-root-ca.png`](artifacts/tls/02-server-cert-issued-by-root-ca.png) | Available (earlier console-built instance) |
+| Certificate chain | `openssl verify` against the Root CA returns `OK` | [`tls/03-root-ca-verify.png`](artifacts/tls/03-root-ca-verify.png) | Available (earlier console-built instance) |
+| Certificate SAN | `DNS:web.lab.test` | [`tls/04-server-cert-san.png`](artifacts/tls/04-server-cert-san.png) | Available (earlier console-built instance) |
+| TLS 1.3 | Negotiated protocol | [`tls/05-tls13.png`](artifacts/tls/05-tls13.png) | Available (earlier console-built instance) |
+| Nginx TLS configuration | HTTPS server block | [`tls/06-nginx-tls-config.png`](artifacts/tls/06-nginx-tls-config.png) | Available (earlier console-built instance) |
 | GitHub Actions | Completed run for `Deploy website to EC2`; it verifies only the steps implemented by that workflow | [Run 37144567040](https://github.com/estennio/aws-devops-infrastructure-lab/actions/runs/37144567040), commit `c83425515b175a0dc70bd9a6afd9e52b03933014` | Available |
 | Local HTTP/HTTPS, service state, `nginx -t` | Collector output with exit statuses | Run [`scripts/collect-evidence.sh`](../scripts/collect-evidence.sh) on the server; results are transcribed in the verification document | Recorded |
 | OIDC and SSM GitHub Actions deploy | Manual run, S3 upload, SSM output, served SHA, and a rollback test | `.github/workflows/deploy-ssm.yml` | Next stage |
 | Versioned GitHub Actions deploy (SSH) | Manual run showing the expected SHA over local and external HTTP/HTTPS, including any rollback result | `.github/workflows/deploy-versioned.yml` | Next stage |
 | Terraform | Plan, outputs, live HTTP/HTTPS and SSM checks | `infra/terraform/` | [`artifacts/terraform/`](artifacts/terraform/) |
+| Current instance: Nginx, listeners, `nginx -t`, HTTP/HTTPS | Collector output with exit statuses, run through SSM Run Command | [`05-server-evidence.txt`](artifacts/terraform/05-server-evidence.txt) | Available |
+| Current instance: TLS 1.3 and certificate | Forced TLS 1.3 handshake; self-signed certificate, `CN`/`SAN` `web.lab.test`, issuer equal to subject (no CA chain) | [`05-server-evidence.txt`](artifacts/terraform/05-server-evidence.txt) | Available |
+| Current instance: SSM Run Command | Command status `Success` for the collection run without SSH | [`05-server-evidence.txt`](artifacts/terraform/05-server-evidence.txt) | Available |
 
 ## Verified GitHub Actions links
 

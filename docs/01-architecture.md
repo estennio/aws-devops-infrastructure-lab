@@ -25,7 +25,7 @@ Security Group
     |
 EC2 lab-web-server
 i-041c6cfc9e5181d4c / t3.micro / Ubuntu Server 24.04 LTS
-    |-- Administration: SSH and Session Manager
+    |-- Administration: Session Manager (SSH disabled by default)
     `-- Nginx
         |-- HTTP :80
         `-- HTTPS :443 / TLS 1.3
@@ -39,10 +39,11 @@ The public IPv4 used for testing is not recorded as permanent configuration beca
 |---|---|---|
 | VPC, public subnet, Internet Gateway, route table, Security Group | Deployed and verified | Transcribed AWS environment checks |
 | EC2 `lab-web-server` (`t3.micro`) | Deployed and verified | Transcribed instance and OS checks |
-| Session Manager | Verified on the Terraform-managed instance (`Online`) | [`evidence/artifacts/terraform/04-ssm-online.txt`](../evidence/artifacts/terraform/04-ssm-online.txt); earlier session screenshots from the console-built instance |
+| Session Manager and SSM Run Command | Verified on the Terraform-managed instance (`Online`; the evidence collection itself ran through SSM Run Command) | [`04-ssm-online.txt`](../evidence/artifacts/terraform/04-ssm-online.txt), [`05-server-evidence.txt`](../evidence/artifacts/terraform/05-server-evidence.txt); earlier session screenshots from the console-built instance |
 | SSH | Recorded on the earlier console-built instance only; disabled by default in Terraform | Transcribed SSH results |
-| Nginx, HTTP, HTTPS | HTTP and HTTPS `200 OK` verified on the Terraform-managed instance | [`evidence/artifacts/terraform/03-http-https-check.txt`](../evidence/artifacts/terraform/03-http-https-check.txt) |
-| TLS 1.3 and laboratory Root CA certificate | Recorded on the earlier console-built instance; not re-verified on the current one | Transcribed OpenSSL results and TLS screenshots |
+| Nginx, HTTP, HTTPS | `nginx -t`, service state, TCP 80/443 listeners, and HTTP/HTTPS `200 OK` verified on the Terraform-managed instance | [`03-http-https-check.txt`](../evidence/artifacts/terraform/03-http-https-check.txt), [`05-server-evidence.txt`](../evidence/artifacts/terraform/05-server-evidence.txt) |
+| TLS 1.3 with a self-signed certificate | Verified on the Terraform-managed instance: TLS 1.3, `CN`/`SAN` `web.lab.test`, issuer equal to subject | [`05-server-evidence.txt`](../evidence/artifacts/terraform/05-server-evidence.txt) |
+| Laboratory Root CA chain | Historical: recorded on the earlier console-built instance only; not claimed for the current one | TLS screenshots in the evidence index |
 | Static website | Implemented in the repository | `index.html` and `style.css` |
 | GitHub Actions delivery over SSH | Implemented; successful runs linked in the evidence index | `.github/workflows/deploy.yml` and the verification record |
 | GitHub Actions delivery over OIDC and SSM | Implemented; no run recorded yet | `.github/workflows/deploy-ssm.yml`, `infra/terraform/github-oidc.tf` |
@@ -61,7 +62,7 @@ Curated screenshots of the AWS resources, Session Manager, HTTP/HTTPS, and TLS a
 - **Operating system:** Ubuntu Server 24.04 LTS
 - **Web server:** Nginx
 
-The verification record reports external `200 OK` responses over HTTP and HTTPS, Nginx listening on TCP 80 and 443, TLS 1.3 negotiation, and a certificate with CN/SAN `web.lab.test`. The certificate was first self-signed and was later re-issued by a laboratory Root CA (see the TLS evidence).
+The verification record reports external `200 OK` responses over HTTP and HTTPS, Nginx listening on TCP 80 and 443, TLS 1.3 negotiation, and a certificate with CN/SAN `web.lab.test`. On the earlier console-built instance the certificate was first self-signed and later re-issued by a laboratory Root CA (historical TLS evidence). The current instance uses the self-signed certificate that `scripts/bootstrap.sh` generates, with no CA chain.
 
 ## Administration and security boundary
 

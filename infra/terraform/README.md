@@ -20,7 +20,8 @@ The AMI ID is not hard-coded. Terraform reads Canonical's public Systems Manager
 
 | File | Purpose |
 |---|---|
-| `versions.tf` | Terraform and AWS provider constraints. |
+| `versions.tf` | Terraform and AWS provider constraints, plus the partial S3 backend. |
+| `backend.hcl.example` | Template for the ignored `backend.hcl` that supplies the state bucket name. |
 | `providers.tf` | AWS provider, enforced common tags, and local naming. |
 | `data.tf` | Availability Zones, public Ubuntu AMI parameter, partition, and EC2 trust policy. |
 | `network.tf` | VPC, subnet, Internet Gateway, route table, route, and association. |
@@ -53,7 +54,34 @@ The existing GitHub Actions deployment uses SSH. An SSM-only instance is intenti
 
 Terraform uses the standard AWS provider credential chain. Authenticate outside the repository, for example with an approved AWS profile or short-lived identity. Do not put access keys in `.tf`, `.tfvars`, shell history, or committed files.
 
-Local state is the default because no state backend is created in this minimum scope. State, plans, local variable files, and crash logs are ignored by Git. State can contain resource details and must still be protected. For team use, configure an approved remote backend with locking and encryption before creating resources; backend infrastructure is deliberately outside this configuration.
+State is stored in an S3 bucket with native S3 locking (`use_lockfile = true`, no DynamoDB table), which requires Terraform `>= 1.11.0`. The bucket is created by the separate configuration in `../bootstrap`, which itself uses local state (see its README for why). The `backend "s3"` block in `versions.tf` is a partial configuration: the bucket name is supplied at init time from `backend.hcl`, which is ignored by Git. State, plans, local variable files, and crash logs are never committed; state can contain resource details and must still be protected.
+
+### Remote state setup order
+
+1. **Bootstrap the bucket.** Follow `../bootstrap/README.md` once to create the state bucket and note its name.
+2. **Create `backend.hcl`.** Copy `backend.hcl.example` to `backend.hcl` and set `bucket` to the bootstrap output:
+
+   ```powershell
+   cd infra	erraform
+   Copy-Item backend.hcl.example backend.hcl
+   # edit backend.hcl
+   ```
+
+3. **Initialize with the backend configuration:**
+
+   ```powershell
+   terraform init -backend-config=backend.hcl
+   ```
+
+4. **Migrate existing local state, if any.** If a local `terraform.tfstate` exists from earlier work, `terraform init` detects the backend change; migrate it explicitly and answer `yes` when asked to copy the state:
+
+   ```powershell
+   terraform init -backend-config=backend.hcl -migrate-state
+   ```
+
+   Afterwards, run `terraform state list` to confirm the resources are present, and keep the old local file as a backup until `terraform plan` shows no unexpected changes.
+
+CI validates the configuration with `terraform init -backend=false`, so it needs neither the bucket nor AWS credentials.
 
 Commit `.terraform.lock.hcl` after the first successful `terraform init` so provider selections are reproducible. Do not commit `.terraform/`.
 
@@ -61,7 +89,7 @@ Commit `.terraform.lock.hcl` after the first successful `terraform init` so prov
 
 This procedure is only for creating a separate environment when the plan shows new resources. It is not the import procedure for the already documented lab.
 
-1. Install Terraform `>= 1.6.0, < 2.0.0` and configure authorized AWS credentials outside the repository.
+1. Install Terraform `>= 1.11.0, < 2.0.0` and configure authorized AWS credentials outside the repository.
 2. Copy `terraform.tfvars.example` to `terraform.tfvars` and make the decisions listed above. The destination file is ignored by Git.
 3. Initialize and validate:
 

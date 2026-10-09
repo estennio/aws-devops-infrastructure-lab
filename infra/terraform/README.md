@@ -45,7 +45,7 @@ For a new environment, decide before planning:
 
 Terraform never creates or reads an SSH private key. With `enable_ssh=false`, no TCP/22 ingress rule or key-pair association is configured.
 
-The reused bootstrap may generate the laboratory TLS key locally on the EC2 filesystem, as documented in `../../docs/04-server-bootstrap.md`. Terraform does not generate, receive, output, or store that key in state.
+The reused bootstrap may generate the laboratory TLS key locally on the EC2 filesystem, as documented in `../../docs/03-server-bootstrap.md`. Terraform does not generate, receive, output, or store that key in state.
 
 No DNS record is created. The bootstrap's `web.lab.test` certificate remains a self-signed laboratory certificate, and clients must supply their own name resolution for hostname-based tests.
 

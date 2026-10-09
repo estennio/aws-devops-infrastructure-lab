@@ -2,134 +2,89 @@
 
 [![Validate](https://github.com/estennio/aws-devops-infrastructure-lab/actions/workflows/validate.yml/badge.svg)](https://github.com/estennio/aws-devops-infrastructure-lab/actions/workflows/validate.yml)
 
-Hands-on AWS/DevOps laboratory: a static website served by Nginx on an Ubuntu EC2 instance inside a custom VPC, with HTTPS/TLS 1.3, Session Manager administration, automated GitHub Actions delivery, versioned releases with rollback, and Terraform for the minimum infrastructure.
+A small, fully Terraform-managed AWS stack that serves a static site over HTTPS, with keyless GitHub Actions deployment and rollback.
 
-## Highlights
+## Summary
 
-| Area | Result |
-|---|---|
-| Networking | Custom VPC `10.20.0.0/16`, public subnet `10.20.1.0/24`, Internet Gateway, public route table, and Security Group in `us-east-2` |
-| Compute | EC2 `lab-web-server` (`t3.micro`, Ubuntu Server 24.04 LTS) |
-| Administration | Key-based SSH and AWS Systems Manager Session Manager (managed node `Online`, IAM role for SSM) |
-| Web and TLS | Nginx on TCP 80/443, HTTP and HTTPS `200 OK` locally and externally, TLS 1.3, certificate for `web.lab.test` with matching CN/SAN, issued by a laboratory Root CA |
-| Delivery | GitHub Actions deployment over SSH with successful runs linked in the [evidence index](evidence/README.md) |
-| Releases | SHA-addressed releases, atomic activation, validation over HTTP/HTTPS, and automatic rollback |
-| Infrastructure as code | Terraform for the VPC, subnet, routing, Security Group, EC2, and SSM IAM profile |
-| Evidence | Curated screenshots, verified workflow runs, and a server-side evidence collector |
+I wanted to practice the full path from an empty AWS account to a verified HTTPS endpoint, without the console. I built a custom VPC and an Ubuntu EC2 instance in `us-east-2`, all as Terraform, with Nginx and TLS 1.3 configured on first boot. A GitHub Actions deployment over OIDC and SSM Run Command (no SSH, no stored AWS keys) is set up and implemented but has not run yet. CI validates every change.
+
+**Stack:** AWS (VPC, EC2, IAM, S3, SSM), Terraform, GitHub Actions, Nginx, Bash.
 
 ## Architecture
 
-```text
-Internet
-   |
-Internet Gateway
-   |
-VPC 10.20.0.0/16
-   |
-Public Subnet A 10.20.1.0/24
-   |
-Security Group
-   |
-EC2 t3.micro / Ubuntu 24.04 LTS
-   |-- SSH and Session Manager
-   `-- Nginx
-       |-- HTTP :80
-       `-- HTTPS :443 / TLS 1.3
+```mermaid
+flowchart LR
+    user([Internet]) -->|HTTP 80 / HTTPS 443| igw[Internet Gateway]
+
+    subgraph vpc["VPC 10.20.0.0/16 (us-east-2)"]
+        subgraph subnet["Public subnet 10.20.1.0/24"]
+            sg{{Security Group<br/>80, 443 in}} --> ec2["EC2 t3.micro<br/>Ubuntu 24.04 + Nginx"]
+        end
+    end
+    igw --> sg
+    ec2 -. instance profile .- role[/"IAM role<br/>SSM core + read releases/"/]
+
+    subgraph deploy["Deploy (manual workflow)"]
+        gha[GitHub Actions] -->|OIDC token| iam[IAM role<br/>environment: production]
+        iam -->|PutObject| s3[(S3 releases)]
+        iam -->|SendCommand| ssm[SSM Run Command]
+    end
+    ssm --> ec2
+    ec2 -->|GetObject| s3
+
+    tfstate[(S3 Terraform state<br/>native locking)] -.- tf[Terraform]
 ```
 
-Details, component table, and design decisions: [AWS Infrastructure Architecture](docs/02-architecture.md).
+## What I built
 
-## What is in the repository
+- **Infrastructure as code:** the VPC, subnet, routing, Security Group, EC2 and IAM are all in [`infra/terraform/`](infra/terraform/). A from-scratch apply created 14 resources; [plan, outputs and live checks](evidence/artifacts/terraform/) are committed.
+- **Remote state:** a separate [bootstrap module](infra/bootstrap/) creates the S3 state bucket (versioned, encrypted, TLS-only); the main stack uses S3 native locking.
+- **Network:** one public subnet behind an Internet Gateway, with HTTP/HTTPS open and SSH off by default ([`network.tf`](infra/terraform/network.tf), [`security.tf`](infra/terraform/security.tf)).
+- **Security (configured in Terraform):** IMDSv2 required, encrypted root volume, least-privilege IAM, validated Terraform inputs, no secrets in the repository ([`compute.tf`](infra/terraform/compute.tf), [`github-oidc.tf`](infra/terraform/github-oidc.tf)).
+- **TLS:** Nginx is configured for HTTPS with TLS 1.2/1.3 and a certificate from a laboratory Root CA ([bootstrap](docs/03-server-bootstrap.md)). TLS 1.3 and the CA chain were recorded on the earlier console-built instance ([TLS evidence](evidence/README.md)), not re-verified on the current one.
+- **First-boot configuration:** `user_data` clones this repository and runs the idempotent [`scripts/bootstrap.sh`](scripts/bootstrap.sh); I recorded HTTP and HTTPS `200 OK` and an `Online` SSM node on the resulting instance.
+- **CI:** [`validate.yml`](.github/workflows/validate.yml) runs `terraform fmt` and `validate` on both Terraform roots, TFLint, ShellCheck and a Trivy config scan on every PR.
+- **Deploy with rollback (implemented, not yet run):** [`deploy-ssm.yml`](.github/workflows/deploy-ssm.yml) is written to upload a SHA-addressed release to S3, activate it on the instance through SSM, validate HTTP/HTTPS from the runner, and roll back on failure ([design](docs/04-versioned-deployment.md)).
 
-| Artifact | Purpose |
-|---|---|
-| `index.html`, `style.css` | Static portfolio page describing the lab, responsive and dependency-free. |
-| `.github/workflows/deploy.yml` | Deploys the site to EC2 over SSH on relevant pushes to `main` or manual dispatch. |
-| `.github/workflows/deploy-versioned.yml` | Manual SHA-addressed deployment with atomic activation, validation, and rollback. |
-| `configs/nginx/web.lab.test.conf` | HTTP/HTTPS virtual host serving `/var/www/html` with TLS 1.2/1.3. |
-| `configs/nginx/web.lab.test.versioned.conf` | Virtual host serving the atomic `current` release link. |
-| `scripts/bootstrap.sh` | Idempotent Ubuntu 24.04 bootstrap: Nginx, site files, and certificate. |
-| `scripts/prepare-versioned-deploy.sh`, `scripts/versioned-deploy.sh` | Server migration to the release layout, plus release activation and rollback. |
-| `scripts/collect-evidence.sh` | Collector for non-sensitive operational evidence with per-check exit statuses. |
-| `infra/terraform/` | Terraform for the minimum AWS architecture. |
-| `evidence/` | Evidence index and curated screenshots. |
+## Key decisions
 
-## Deployment pipeline
+- **SSM instead of SSH for deployment**, because the runner then needs no open port 22, no key and no host-key secret. The role is limited to `AWS-RunShellScript` on this one instance.
+- **OIDC instead of an AWS access key**, because there is nothing long-lived to leak or rotate. The trust policy is pinned to this repository and the `production` environment.
+- **Environment-pinned trust instead of a branch name**, because the environment can require reviewers and restrict deployments to `main`, so a pull request cannot get credentials.
+- **No NAT Gateway, load balancer or database**, because a single public instance meets the goal and those services dominate the cost of a lab ([scope decisions](docs/01-architecture.md)).
+- **Atomic symlink switch instead of copying files in place**, because `mv -T` over `current` swaps releases in one step and keeps the previous release for rollback ([versioned deployment](docs/04-versioned-deployment.md)).
+- **Inline, justified Trivy suppressions instead of a global ignore file**, because each accepted finding (for example, SSE-S3 instead of a customer-managed KMS key) is documented next to the resource it applies to ([`infra/bootstrap/main.tf`](infra/bootstrap/main.tf)).
 
-The deployment workflow:
+## How to run
 
-1. reads the SSH key, host key, host, and user from GitHub Actions secrets;
-2. uploads `index.html` and `style.css` with `scp` to a temporary directory;
-3. installs them under `/var/www/html`;
-4. runs `nginx -t`, reloads Nginx, and requests `http://127.0.0.1/` with `curl -fsS`.
+Needs Terraform ≥ 1.11, the AWS CLI with credentials, and PowerShell. Both steps create billable resources; applying is your decision.
 
-The final request confirms that the local HTTP endpoint answers without an HTTP error. The workflow does not search the response for a specific phrase and does not test the external endpoint, HTTPS, or the contents of `style.css`.
+```powershell
+# 1. Create the remote state bucket (local state, one time)
+cd infra\bootstrap
+Copy-Item terraform.tfvars.example terraform.tfvars   # set a globally unique state_bucket_name
+terraform init
+terraform apply
 
-The versioned workflow publishes complete releases by commit SHA, switches a symbolic link atomically, compares the served `VERSION` with the workflow SHA, validates local and external HTTP/HTTPS transport, and rolls back on failure. It is manual-only and targets the versioned layout described in [Versioned Deployment and Rollback](docs/05-versioned-deployment.md).
-
-Both workflows share one concurrency group with in-progress cancellation disabled, so EC2 deployments never overlap or interrupt a running deployment.
-
-## Documentation
-
-| Document | Content |
-|---|---|
-| [Architecture](docs/02-architecture.md) | Topology, components, administration and security boundary, scope decisions |
-| [Deployment and Verification](docs/03-deployment-and-verification.md) | Recorded host, SSM, HTTP, HTTPS, and TLS results; pipeline behavior; status matrix |
-| [Server Bootstrap](docs/04-server-bootstrap.md) | Reproducible Nginx server setup and certificate handling |
-| [Versioned Deployment and Rollback](docs/05-versioned-deployment.md) | Release layout, server preparation, validation, and rollback |
-| [Terraform](infra/terraform/README.md) | Minimum AWS infrastructure, variables, usage, import, and cost notes |
-| [Evidence index](evidence/README.md) | Screenshots, verified workflow runs, and collection procedures |
-
-## Repository structure
-
-```text
-.
-|-- .github/workflows/
-|   |-- deploy.yml
-|   `-- deploy-versioned.yml
-|-- configs/nginx/
-|   |-- web.lab.test.conf
-|   `-- web.lab.test.versioned.conf
-|-- docs/
-|   |-- 02-architecture.md
-|   |-- 03-deployment-and-verification.md
-|   |-- 04-server-bootstrap.md
-|   `-- 05-versioned-deployment.md
-|-- evidence/
-|   |-- README.md
-|   `-- artifacts/
-|-- infra/terraform/
-|-- scripts/
-|   |-- bootstrap.sh
-|   |-- collect-evidence.sh
-|   |-- prepare-versioned-deploy.sh
-|   `-- versioned-deploy.sh
-|-- .gitignore
-|-- README.md
-|-- index.html
-`-- style.css
+# 2. Create the lab
+cd ..\terraform
+Copy-Item backend.hcl.example backend.hcl             # set the bucket name from step 1
+terraform init "-backend-config=backend.hcl"
+terraform plan -out tfplan
+terraform apply tfplan
 ```
 
-## Security and cost
+Variables, import of existing resources, the OIDC deploy setup and cost notes: [`infra/terraform/README.md`](infra/terraform/README.md).
 
-- No EC2 private key, AWS credential, password, token, workflow secret, or certificate private material is committed. State, saved plans, local variable files, and certificates are excluded by `.gitignore`.
-- SSH should be restricted to the administrator's current public IP whenever practical. The GitHub-hosted runner deployment requires an allowed SSH path to the instance.
-- The certificate is issued by a laboratory CA and is intended for laboratory verification, not public trust.
-- The design avoids NAT Gateway, Load Balancer, RDS, and additional instances to keep the laboratory inexpensive.
+## Lessons learned
 
-## Scope and limits
+<!-- TODO: to be written by the author. -->
 
-This is a single-instance laboratory, and the documentation distinguishes three kinds of content:
+## Limitations and next steps
 
-| Category | Meaning |
-|---|---|
-| Implemented in the repository | Files that can be inspected here: site, workflows, Nginx configuration, scripts, evidence collector, and Terraform. |
-| Recorded verification | Results observed in the AWS/EC2 environment, transcribed in [Deployment and Verification](docs/03-deployment-and-verification.md) and supported by the [evidence index](evidence/README.md). They are a record, not a live check. |
-| Scope decisions | Components intentionally left out: additional subnets and Availability Zones, NAT Gateway, RDS, Load Balancer and Auto Scaling, ECS/EKS, and Docker. |
-
-The Terraform configuration was applied from scratch against AWS: the plan created 14 resources, and the instance bootstrap (Nginx, TLS, SSM agent) ran automatically through `user_data`. HTTP, HTTPS, and Session Manager were then verified live; see the [Terraform evidence](evidence/artifacts/terraform/). This replaced the earlier console-created infrastructure. One operational step remains as the next stage: migrating the EC2 instance to the versioned release layout.
-
-## Next steps
-
-1. Migrate EC2 to the versioned layout and record a versioned deployment run.
-2. Optionally add a publicly trusted domain and certificate.
+- **Single instance, single AZ:** no redundancy, no load balancer, no database. This is intentional for a lab.
+- **TLS is not publicly trusted:** the certificate comes from a laboratory CA for `web.lab.test`. A public domain and certificate are a possible next step.
+- **The SSM deploy has no recorded run:** [`deploy-ssm.yml`](.github/workflows/deploy-ssm.yml) is implemented but has no recorded run. It needs the OIDC resources applied, the `production` environment and GitHub variables configured, and the server migrated to the versioned layout ([procedure](docs/04-versioned-deployment.md)).
+- **Legacy SSH workflows still exist:** earlier GitHub Actions deploys over SSH are recorded as history in the [evidence index](evidence/README.md). I plan to remove them once the SSM path has a recorded run.
+- **Console-era evidence:** the SSH, Session Manager and TLS screenshots come from the earlier console-built instance that Terraform replaced; the current instance's evidence is in [`evidence/artifacts/terraform/`](evidence/artifacts/terraform/). Evidence is a record, not a live check; see the [evidence index](evidence/README.md).
+- **Read the docs for detail:** [architecture](docs/01-architecture.md), [verification](docs/02-deployment-and-verification.md), [server bootstrap](docs/03-server-bootstrap.md), [versioned deployment](docs/04-versioned-deployment.md), [repository guide](docs/05-repository-guide.md).

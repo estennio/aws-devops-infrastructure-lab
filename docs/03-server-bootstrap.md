@@ -67,7 +67,7 @@ The existing workflow uploads only `index.html` and `style.css`, installs them i
 
 This configuration preserves that web root and serves HTTP directly, so the workflow's deployment steps do not need to change. Changes limited to `configs/`, `scripts/`, or `docs/` do not match the workflow's current push path filters.
 
-The optional versioned deployment uses a different document root and requires a deliberate migration after this bootstrap. It is documented separately in [Versioned Deployment and Rollback](05-versioned-deployment.md). Until that migration is performed, `.github/workflows/deploy.yml` is the compatible deployment path and the versioned workflow is not dispatched.
+The optional versioned deployment uses a different document root and requires a deliberate migration after this bootstrap. It is documented separately in [Versioned Deployment and Rollback](04-versioned-deployment.md). Until that migration is performed, `.github/workflows/deploy.yml` is the compatible deployment path and the versioned workflow is not dispatched.
 
 ## Verification on the server
 

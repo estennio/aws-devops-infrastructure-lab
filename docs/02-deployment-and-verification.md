@@ -4,7 +4,7 @@
 
 This document is the repository's text record of the checks performed during the lab. The commands and outputs below were transcribed from AWS, EC2, Windows PowerShell, and GitHub Actions activity; they are not rerun automatically when this document changes.
 
-Supporting screenshots are committed under `evidence/artifacts/` and workflow runs are linked in the [evidence index](../evidence/README.md). The static site, deployment workflow, and [server bootstrap](04-server-bootstrap.md) can be inspected directly in the repository.
+Supporting screenshots are committed under `evidence/artifacts/` and workflow runs are linked in the [evidence index](../evidence/README.md). The static site, deployment workflow, and [server bootstrap](03-server-bootstrap.md) can be inspected directly in the repository.
 
 ## Recorded environment
 
@@ -14,9 +14,11 @@ Supporting screenshots are committed under `evidence/artifacts/` and workflow ru
 - EC2 instance: `lab-web-server` (`i-041c6cfc9e5181d4c`), `t3.micro`, managed by Terraform (replaced the earlier console-created instance)
 - OS: Ubuntu Server 24.04 LTS
 - Web server: Nginx
-- Administration: SSH and AWS Systems Manager Session Manager
+- Administration: AWS Systems Manager Session Manager (SSH was recorded on the earlier console-built instance and is disabled by default in Terraform)
 
 ## Recorded host and administration checks
+
+The checks in this section and the screenshots under `evidence/artifacts/` (`aws`, `ssm`, `tls`, `web`) were recorded on the earlier console-created instance, which Terraform has since replaced. The Terraform-managed instance has its own evidence in [`evidence/artifacts/terraform/`](../evidence/artifacts/terraform/): the plan, outputs, an HTTP/HTTPS check, and the SSM `Online` status. TLS 1.3 and the laboratory Root CA certificate were not re-verified on it.
 
 The private key `lab-key.pem` was kept outside the repository. After its NTFS permissions were restricted, an SSH connection from Windows PowerShell was recorded as successful.
 
@@ -142,7 +144,7 @@ The current workflow:
 
 A successful run demonstrates that the upload and remote commands completed, Nginx accepted its configuration, and the local HTTP request did not return a curl/HTTP error. It does **not** demonstrate that the page contains `Deployed automatically with GitHub Actions.` or any other specific text. It also does not test the external endpoint or HTTPS.
 
-The repository also contains the separate `Deploy versioned website to EC2` workflow. It is manual-only and is used after the EC2 preparation in [Versioned Deployment and Rollback](05-versioned-deployment.md) succeeds. Its implemented checks cover `index.html`, `style.css`, and a SHA-bearing `VERSION` file over local and external HTTP and HTTPS. HTTPS with `--insecure` checks transport through the self-signed laboratory endpoint; it is not evidence of certificate trust. Its first execution follows the EC2 migration, which is the next stage of the lab.
+The repository also contains the separate `Deploy versioned website to EC2` workflow. It is manual-only and is used after the EC2 preparation in [Versioned Deployment and Rollback](04-versioned-deployment.md) succeeds. Its implemented checks cover `index.html`, `style.css`, and a SHA-bearing `VERSION` file over local and external HTTP and HTTPS. HTTPS with `--insecure` checks transport through the self-signed laboratory endpoint; it is not evidence of certificate trust. Its first execution follows the EC2 migration, which is the next stage of the lab.
 
 ## Status matrix
 
@@ -151,10 +153,13 @@ The repository also contains the separate `Deploy versioned website to EC2` work
 | Static HTML/CSS site | Implemented | Served over HTTP and HTTPS |
 | GitHub Actions SSH deployment | Implemented | Successful runs linked in the evidence index |
 | Versioned deployment and rollback | Implemented (manual workflow and server scripts) | Runs after the EC2 migration (next stage) |
-| VPC, subnet, Internet Gateway, route table, Security Group | Terraform configuration | Deployed and verified; screenshots committed |
-| EC2, Ubuntu 24.04 LTS, and SSM IAM profile | Terraform configuration | Deployed and verified; screenshots committed |
-| SSH and Session Manager | Operated through the console and client | Successful access and service state recorded; screenshots committed |
-| Nginx, HTTP, HTTPS, TLS 1.3 | Reproducible bootstrap and configuration | Service, requests, listeners, and TLS recorded; screenshots committed |
+| OIDC and SSM deployment | Implemented (`deploy-ssm.yml`, `github-oidc.tf`) | No run recorded yet |
+| VPC, subnet, Internet Gateway, route table, Security Group | Terraform configuration | Applied from scratch; outputs in `evidence/artifacts/terraform/`; earlier console screenshots committed |
+| EC2, Ubuntu 24.04 LTS, and SSM IAM profile | Terraform configuration | Applied from scratch; instance `Online` in SSM (`evidence/artifacts/terraform/`) |
+| Session Manager | Terraform-managed instance profile | `Online` recorded for the current instance; session screenshots are from the earlier instance |
+| SSH | Disabled by default in Terraform | Successful access recorded on the earlier instance only |
+| Nginx, HTTP, HTTPS | Reproducible bootstrap and configuration | `200 OK` over HTTP and HTTPS recorded on the current instance |
+| TLS 1.3 and laboratory Root CA certificate | Bootstrap and Nginx configuration | Recorded on the earlier instance; not re-verified on the current one |
 | Terraform / infrastructure-as-code | Minimum configuration in `infra/terraform/` | Applied from scratch (14 resources); plan, outputs, and live checks in `evidence/artifacts/terraform/` |
 | RDS, NAT Gateway, Load Balancer, Auto Scaling, ECS/EKS, Docker | Outside the laboratory scope | Not applicable |
 

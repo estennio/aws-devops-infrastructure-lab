@@ -1,0 +1,20 @@
+]633;E;{ curl -sSI "$(terraform output -raw http_url)"\x3b curl -skSI "https://$(terraform output -raw instance_public_ip)/"\x3b } > ../../evidence/artifacts/terraform/03-http-https-check.txt;3fe30fbd-8c23-42e6-8a4a-2d85154c0506]633;CHTTP/1.1 200 OK
+Server: nginx/1.24.0 (Ubuntu)
+Date: Fri, 09 Oct 2026 19:01:23 GMT
+Content-Type: text/html
+Content-Length: 21437
+Last-Modified: Fri, 09 Oct 2026 18:54:44 GMT
+Connection: keep-alive
+ETag: "6ac93874-53bd"
+Accept-Ranges: bytes
+
+HTTP/1.1 200 OK
+Server: nginx/1.24.0 (Ubuntu)
+Date: Fri, 09 Oct 2026 19:01:27 GMT
+Content-Type: text/html
+Content-Length: 21437
+Last-Modified: Fri, 09 Oct 2026 18:54:44 GMT
+Connection: keep-alive
+ETag: "6ac93874-53bd"
+Accept-Ranges: bytes
+

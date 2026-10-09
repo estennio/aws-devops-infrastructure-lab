@@ -1,0 +1,26 @@
+availability_zone = "us-east-2a"
+aws_region = "us-east-2"
+http_url = "http://3.129.69.56/"
+instance_id = "i-041c6cfc9e5181d4c"
+instance_public_dns = "ec2-3-129-69-56.us-east-2.compute.amazonaws.com"
+instance_public_ip = "3.129.69.56"
+internet_gateway_id = "igw-06650cb5fd2514201"
+public_route_table_association_id = "rtbassoc-0b720b8ff0828a681"
+public_route_table_id = "rtb-0ddc404d58b2d0f4a"
+public_subnet_id = "subnet-09371c26c1c6910d3"
+security_group_id = "sg-0ce0117d8fb1edaff"
+security_group_rule_ids = {
+  "egress" = "sgr-09d1e02c77daf215e"
+  "http" = {
+    "0.0.0.0/0" = "sgr-02b32926198c32c98"
+  }
+  "https" = {
+    "0.0.0.0/0" = "sgr-04242f49ceddd8b4d"
+  }
+  "ssh" = {}
+}
+ssm_instance_profile_name = "aws-devops-infrastructure-lab-ssm-profile"
+ssm_role_name = "aws-devops-infrastructure-lab-ssm-role"
+ssm_start_session_command = "aws ssm start-session --target i-041c6cfc9e5181d4c --region us-east-2"
+ubuntu_ami_id = "ami-09519cc56eb20524a"
+vpc_id = "vpc-0d5b42d79ea39cd02"

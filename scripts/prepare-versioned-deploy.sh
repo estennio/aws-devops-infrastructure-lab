@@ -19,6 +19,7 @@ readonly VERSIONED_CONFIG="${REPO_ROOT}/configs/nginx/web.lab.test.versioned.con
 readonly DEPLOY_COMMAND_SOURCE="${REPO_ROOT}/scripts/versioned-deploy.sh"
 readonly DEPLOY_COMMAND="/usr/local/sbin/aws-devops-versioned-deploy"
 readonly SUDOERS_FILE="/etc/sudoers.d/aws-devops-versioned-deploy"
+readonly VALIDATION_ATTEMPTS=10
 NGINX_CONFIG_CHANGED=false
 
 die() {
@@ -123,27 +124,52 @@ install_nginx_config() {
     fi
 }
 
-validate_migration() {
-    local expected_version
+served_version_matches() {
+    local expected_version="$1"
     local http_version
     local https_version
 
-    expected_version="$(<"${CURRENT_LINK}/VERSION")"
-    http_version="$(curl --fail --silent --show-error \
+    http_version="$(curl --fail --silent \
         --noproxy '*' \
+        --max-time 10 \
         --resolve "${SERVER_NAME}:80:127.0.0.1" \
         "http://${SERVER_NAME}/VERSION")" || return
     [[ "${http_version}" == "${expected_version}" ]] \
         || return
 
-    printf '%s\n' \
-        "HTTPS uses --insecure only for encrypted transport with the laboratory certificate; certificate trust is not validated."
-    https_version="$(curl --insecure --fail --silent --show-error \
+    # HTTPS uses --insecure only for encrypted transport with the laboratory
+    # certificate; certificate trust is not validated.
+    https_version="$(curl --insecure --fail --silent \
         --noproxy '*' \
+        --max-time 10 \
         --resolve "${SERVER_NAME}:443:127.0.0.1" \
         "https://${SERVER_NAME}/VERSION")" || return
     [[ "${https_version}" == "${expected_version}" ]] \
         || return
+}
+
+# `systemctl reload nginx` only signals the master process and returns at once.
+# Old workers keep serving the previous root (/var/www/html, which has no
+# VERSION) for a moment, so a single immediate check can fail with a 404 even
+# though the new configuration is correct. Retry for a short window instead.
+validate_migration() {
+    local expected_version
+    local attempt
+
+    expected_version="$(<"${CURRENT_LINK}/VERSION")"
+
+    for ((attempt = 1; attempt <= VALIDATION_ATTEMPTS; attempt++)); do
+        if served_version_matches "${expected_version}"; then
+            printf 'Versioned site serves %s over HTTP and HTTPS (attempt %d).\n' \
+                "${expected_version}" "${attempt}"
+            return 0
+        fi
+        sleep 1
+    done
+
+    printf 'Versioned site did not serve %s after %d attempts.\n' \
+        "${expected_version}" "${VALIDATION_ATTEMPTS}" >&2
+    return 1
 }
 
 restore_legacy_nginx_config() {

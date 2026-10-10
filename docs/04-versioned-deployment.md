@@ -2,14 +2,13 @@
 
 ## Overview
 
-This flow adds SHA-addressed releases, atomic activation, validation, and rollback on top of the existing deployment. It is delivered as repository code and is applied to EC2 through the preparation steps below:
+This flow adds SHA-addressed releases, atomic activation, validation, and rollback. It is delivered as repository code and is applied to EC2 through the one-time preparation below:
 
-- `.github/workflows/deploy.yml` remains the legacy deployment, now manual-only; only shared concurrency coordination is added, while its deployment steps remain unchanged;
-- `.github/workflows/deploy-versioned.yml` is a separate, manual-only workflow;
-- the versioned workflow is dispatched after the server preparation below succeeds;
-- the EC2 migration is done on the current instance, and releases are deployed with `.github/workflows/deploy-ssm.yml` (OIDC and SSM Run Command, no SSH); its runs are recorded in the [evidence index](../evidence/README.md#oidc-and-ssm-deployment-runs).
+- `.github/workflows/deploy-ssm.yml` deploys releases through GitHub OIDC, S3 and SSM Run Command, with no SSH and no stored AWS key;
+- the workflow is manual and runs only after approval on the `production` environment;
+- the EC2 migration is done on the current instance, and the workflow's runs are recorded in the [evidence index](../evidence/README.md#oidc-and-ssm-deployment-runs).
 
-The manual workflow reuses `EC2_SSH_KEY`, `EC2_KNOWN_HOSTS`, `EC2_HOST`, and `EC2_USER`. It does not introduce a new secret. The stored host-key material remains mandatory, so SSH does not silently trust an unknown host.
+An earlier SSH-based version of this workflow (`deploy-versioned.yml`) used the same server scripts; it was removed once the SSM path had recorded runs.
 
 ## Release layout
 
@@ -42,8 +41,8 @@ Preparation expects Ubuntu 24.04 LTS with the repository's Nginx configuration a
 - `/etc/nginx/sites-enabled/web.lab.test.conf` linking to `/etc/nginx/sites-available/web.lab.test.conf`;
 - the active site file exactly matching `configs/nginx/web.lab.test.conf`, or already matching the versioned configuration;
 - the existing certificate and private key at `/etc/nginx/ssl/web.lab.test/`;
-- the GitHub deployment user already able to connect through verified SSH;
-- Security Group and host firewall access appropriate for SSH from the runner and external TCP 80/443 validation.
+- the instance registered as an `Online` SSM managed node, with the AWS CLI installed by `scripts/bootstrap.sh`;
+- Security Group access for external TCP 80/443 validation from the runner.
 
 These conditions are checked rather than assumed. A different active Nginx layout causes the preparation script to stop so an operator can reconcile it deliberately.
 
@@ -84,17 +83,15 @@ sudo visudo -cf /etc/sudoers.d/aws-devops-versioned-deploy
 
 The HTTPS command uses `--insecure` only to prove encrypted HTTPS transport with the self-signed laboratory certificate. It does **not** validate certificate trust. Trust validation requires a separately obtained and verified public certificate, for example with `curl --cacert web.lab.test.crt`; never copy the private key.
 
-## Activate the manual workflow
+## Run the deployment
 
 Only after the preparation and checks succeed:
 
-1. open GitHub Actions and select **Deploy versioned website to EC2**;
-2. choose the reviewed branch or commit and use **Run workflow**;
+1. open GitHub Actions and select **Deploy versioned website via SSM**;
+2. use **Run workflow** on `main`, then approve the `production` deployment;
 3. confirm that the run reports the expected 40-character SHA for HTTP and HTTPS.
 
-Dispatch it only after preparation. The workflow deliberately has no push trigger. Both workflows share one concurrency group with `cancel-in-progress: false`, so neither a legacy run nor a newer manual dispatch can overlap or cancel an active deployment.
-
-The legacy workflow continues to target `/var/www/html`. Before migration it remains the supported automatic path. After migration, that directory is no longer the Nginx document root, so a legacy run must not be interpreted as publishing the served release. Disable the legacy workflow in the repository settings after migration, or change its triggers in a later reviewed change backed by EC2 evidence. The versioned workflow becomes automatic only after that transition is verified.
+The workflow has no push trigger and uses a concurrency group with `cancel-in-progress: false`, so a newer dispatch cannot overlap or cancel an active deployment.
 
 ## Validation and automatic rollback
 

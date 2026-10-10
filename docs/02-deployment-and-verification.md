@@ -141,28 +141,23 @@ Server: nginx/1.24.0 (Ubuntu)
 
 ## Deployment workflow
 
-The repository implements `Deploy website to EC2` in `.github/workflows/deploy.yml`. Successful executions are linked in the [evidence index](../evidence/README.md).
+Releases are deployed by `Deploy versioned website via SSM` (`.github/workflows/deploy-ssm.yml`). After approval on the `production` environment, the workflow:
 
-The current workflow:
+1. assumes an IAM role through GitHub OIDC, so no AWS access key is stored;
+2. uploads `index.html`, `style.css` and a `VERSION` file holding the commit SHA to `s3://<release bucket>/releases/<sha>/`;
+3. runs the server-side activation through SSM Run Command, which downloads the release, switches `current` atomically and validates it locally;
+4. validates `index.html`, `style.css` and `VERSION` from the runner over HTTP and HTTPS, and requests a rollback through SSM if that fails.
 
-1. runs for relevant changes on `main` or by manual dispatch;
-2. shares a non-canceling concurrency group with the manual versioned workflow;
-3. configures SSH from GitHub Actions secrets;
-4. uploads `index.html` and `style.css` to a temporary directory on the EC2 host;
-5. installs both files in `/var/www/html`;
-6. runs `nginx -t` and reloads Nginx;
-7. runs `curl -fsS http://127.0.0.1/` and discards the response body.
+HTTPS with `--insecure` checks transport through the self-signed laboratory endpoint; it is not evidence of certificate trust. A deploy, a deliberate external-validation failure that rolled back, and a redeploy are recorded in [`01-ssm-deploy-and-rollback.txt`](../evidence/artifacts/deployment/01-ssm-deploy-and-rollback.txt).
 
-A successful run demonstrates that the upload and remote commands completed, Nginx accepted its configuration, and the local HTTP request did not return a curl/HTTP error. It does **not** demonstrate that the page contains `Deployed automatically with GitHub Actions.` or any other specific text. It also does not test the external endpoint or HTTPS.
-
-The repository also contains the separate `Deploy versioned website to EC2` workflow. It is manual-only and is used after the EC2 preparation in [Versioned Deployment and Rollback](04-versioned-deployment.md) succeeds. Its implemented checks cover `index.html`, `style.css`, and a SHA-bearing `VERSION` file over local and external HTTP and HTTPS. HTTPS with `--insecure` checks transport through the self-signed laboratory endpoint; it is not evidence of certificate trust. Its first execution follows the EC2 migration, which is the next stage of the lab.
+Earlier releases were deployed over SSH by `Deploy website to EC2` (`deploy.yml`), whose runs are linked in the [evidence index](../evidence/README.md). Its successful runs show that the upload and remote commands completed, Nginx accepted its configuration, and a local HTTP request returned no error; they do not test the external endpoint, HTTPS, or the page contents. That workflow and its versioned SSH successor were removed once the SSM workflow had recorded runs.
 
 ## Status matrix
 
 | Component | Repository | Verification |
 |---|---|---|
 | Static HTML/CSS site | Implemented | Served over HTTP and HTTPS |
-| GitHub Actions SSH deployment | Implemented | Successful runs linked in the evidence index |
+| GitHub Actions SSH deployment | Removed after the SSM workflow was verified | Earlier successful runs linked in the evidence index |
 | Versioned deployment and rollback | Server migrated to the release layout | Activation, automatic rollback and redeploy recorded through the SSM workflow |
 | OIDC and SSM deployment | Implemented (`deploy-ssm.yml`, `github-oidc.tf`) | Deploy, deliberate failure with rollback, and redeploy recorded ([`01-ssm-deploy-and-rollback.txt`](../evidence/artifacts/deployment/01-ssm-deploy-and-rollback.txt)) |
 | VPC, subnet, Internet Gateway, route table, Security Group | Terraform configuration | Applied from scratch; outputs in `evidence/artifacts/terraform/`; earlier console screenshots committed |

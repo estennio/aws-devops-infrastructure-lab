@@ -61,13 +61,11 @@ On later runs, the script preserves an existing certificate and key. Before reus
 
 If a check fails, the script stops without overwriting either file. Certificate rotation must be deliberate: back up or remove the existing pair on the server, then run the bootstrap again. Other installed files converge to the versioned content, and the enabled-site symlink is reused rather than duplicated.
 
-## Compatibility with automated deployment
+## Relationship with the versioned deployment
 
-The existing workflow uploads only `index.html` and `style.css`, installs them in `/var/www/html`, executes `nginx -t`, reloads Nginx, and requests `http://127.0.0.1/`.
+The bootstrap serves `/var/www/html`. Releases deployed by `.github/workflows/deploy-ssm.yml` need the versioned layout instead, which [Versioned Deployment and Rollback](04-versioned-deployment.md) installs as a one-time migration after this bootstrap.
 
-This configuration preserves that web root and serves HTTP directly, so the workflow's deployment steps do not need to change. The workflow is manual-only; it no longer runs on pushes to `main`.
-
-The optional versioned deployment uses a different document root and requires a deliberate migration after this bootstrap. It is documented separately in [Versioned Deployment and Rollback](04-versioned-deployment.md). Until that migration is performed, `.github/workflows/deploy.yml` is the compatible deployment path and the versioned workflow is not dispatched.
+Do not run the bootstrap again after that migration: it reinstalls the legacy site configuration, so Nginx would serve `/var/www/html` instead of the `current` release. It is still safe to run before the migration, for example to install the AWS CLI on an older instance.
 
 ## Verification on the server
 

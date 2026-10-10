@@ -45,7 +45,7 @@ The public IPv4 used for testing is not recorded as permanent configuration beca
 | TLS 1.3 with a self-signed certificate | Verified on the Terraform-managed instance: TLS 1.3, `CN`/`SAN` `web.lab.test`, issuer equal to subject | [`05-server-evidence.txt`](../evidence/artifacts/terraform/05-server-evidence.txt) |
 | Laboratory Root CA chain | Historical: recorded on the earlier console-built instance only; not claimed for the current one | TLS screenshots in the evidence index |
 | Static website | Implemented in the repository | `index.html` and `style.css` |
-| GitHub Actions delivery over SSH | Implemented; successful runs linked in the evidence index | `.github/workflows/deploy.yml` and the verification record |
+| GitHub Actions delivery over SSH | Historical: successful runs linked in the evidence index; the workflows were removed | Git history and the verification record |
 | GitHub Actions delivery over OIDC and SSM | Verified: deploy, rollback test and redeploy with SSH disabled | [`01-ssm-deploy-and-rollback.txt`](../evidence/artifacts/deployment/01-ssm-deploy-and-rollback.txt), runs in the evidence index |
 | Ubuntu/Nginx bootstrap | Reproducible server configuration | `scripts/bootstrap.sh` and `configs/nginx/web.lab.test.conf` |
 | Minimum AWS infrastructure | Terraform configuration for the minimum architecture | `infra/terraform/` |
@@ -66,7 +66,7 @@ The verification record reports external `200 OK` responses over HTTP and HTTPS,
 
 ## Administration and security boundary
 
-Session Manager is verified on the Terraform-managed instance. SSH was recorded as working on the earlier console-built instance; the Terraform configuration leaves it disabled by default. The legacy deployment workflow still connects over SSH and therefore depends on SSH being enabled and on GitHub Actions secrets. The OIDC and SSM workflow (`deploy-ssm.yml`) removes that dependency and has recorded runs on the current instance with SSH disabled.
+Session Manager is verified on the Terraform-managed instance. SSH was recorded as working on the earlier console-built instance; the Terraform configuration leaves it disabled by default. Deployments no longer use SSH: the OIDC and SSM workflow (`deploy-ssm.yml`) needs neither an open port nor a stored key, and its runs are recorded on the current instance with SSH disabled. The earlier SSH workflows were removed.
 
 The application paths use:
 

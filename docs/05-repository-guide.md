@@ -16,6 +16,7 @@ This guide holds the repository inventory that is not in the README: files, layo
 | `scripts/bootstrap.sh` | Idempotent Ubuntu 24.04 bootstrap: Nginx, site files, and certificate. |
 | `scripts/prepare-versioned-deploy.sh`, `scripts/versioned-deploy.sh` | Server migration to the release layout, plus release activation and rollback. |
 | `scripts/ssm-run.sh` | Sends a script through SSM Run Command, waits, prints stdout and stderr, and fails on a non-success status. |
+| `scripts/validate-release.sh` | Checks from the runner that a host serves `index.html`, `style.css` and the expected `VERSION` over HTTP and HTTPS; shared by the versioned deploy workflows. |
 | `scripts/collect-evidence.sh` | Collector for non-sensitive operational evidence with per-check exit statuses. |
 | `infra/bootstrap/` | Terraform for the S3 state bucket (local state). |
 | `infra/terraform/` | Terraform for the VPC, EC2, IAM, release bucket and OIDC deploy role. |

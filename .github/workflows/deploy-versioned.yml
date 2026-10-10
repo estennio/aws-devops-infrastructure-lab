@@ -86,52 +86,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          validate_external() {
-            local http_sha
-            local https_sha
-
-            curl --fail --silent --show-error \
-              --noproxy '*' \
-              --connect-timeout 10 --max-time 30 \
-              --connect-to "web.lab.test:80:${EC2_HOST}:80" \
-              http://web.lab.test/index.html > /dev/null || return
-            curl --fail --silent --show-error \
-              --noproxy '*' \
-              --connect-timeout 10 --max-time 30 \
-              --connect-to "web.lab.test:80:${EC2_HOST}:80" \
-              http://web.lab.test/style.css > /dev/null || return
-            http_sha="$(curl --fail --silent --show-error \
-              --noproxy '*' \
-              --connect-timeout 10 --max-time 30 \
-              --connect-to "web.lab.test:80:${EC2_HOST}:80" \
-              http://web.lab.test/VERSION)" || return
-            [[ "$http_sha" == "$DEPLOY_SHA" ]] || return
-
-            echo "HTTPS reachability uses --insecure for the laboratory certificate; this does not validate certificate trust."
-            curl --insecure --fail --silent --show-error \
-              --noproxy '*' \
-              --connect-timeout 10 --max-time 30 \
-              --connect-to "web.lab.test:443:${EC2_HOST}:443" \
-              https://web.lab.test/index.html > /dev/null || return
-            curl --insecure --fail --silent --show-error \
-              --noproxy '*' \
-              --connect-timeout 10 --max-time 30 \
-              --connect-to "web.lab.test:443:${EC2_HOST}:443" \
-              https://web.lab.test/style.css > /dev/null || return
-            https_sha="$(curl --insecure --fail --silent --show-error \
-              --noproxy '*' \
-              --connect-timeout 10 --max-time 30 \
-              --connect-to "web.lab.test:443:${EC2_HOST}:443" \
-              https://web.lab.test/VERSION)" || return
-            [[ "$https_sha" == "$DEPLOY_SHA" ]] || return
-          }
-
-          set +e
-          validate_external
-          validation_status=$?
-          set -e
-
-          if (( validation_status != 0 )); then
+          if ! bash scripts/validate-release.sh "$EC2_HOST" "$DEPLOY_SHA"; then
             echo "External validation failed; requesting rollback on EC2." >&2
             ssh -o BatchMode=yes -o StrictHostKeyChecking=yes \
               -o UserKnownHostsFile="$HOME/.ssh/known_hosts" \
@@ -140,10 +95,8 @@ jobs:
               sudo /usr/local/sbin/aws-devops-versioned-deploy \
                 rollback "$DEPLOY_SHA" || \
               echo "Rollback command also failed; inspect the server immediately." >&2
-            exit "$validation_status"
+            exit 1
           fi
-
-          echo "External HTTP and HTTPS transport checks serve commit $DEPLOY_SHA."
 
       - name: Remove SSH private key from runner
         if: always()

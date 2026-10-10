@@ -7,7 +7,8 @@ This guide holds the repository inventory that is not in the README: files, layo
 | Artifact | Purpose |
 |---|---|
 | `index.html`, `style.css` | Static portfolio page describing the lab, responsive and dependency-free. |
-| `.github/workflows/validate.yml` | PR and `main` validation: `terraform fmt`/`validate` on `infra/terraform` and `infra/bootstrap`, TFLint, ShellCheck, and a Trivy config scan. |
+| `.github/workflows/validate.yml` | PR and `main` validation: `terraform fmt`/`validate` and TFLint on `infra/terraform` and `infra/bootstrap`, ShellCheck, and a Trivy config scan. |
+| `.github/dependabot.yml` | Weekly update PRs for the SHA-pinned workflow actions and the Terraform providers. |
 | `.github/workflows/deploy-ssm.yml` | Manual deployment through GitHub OIDC, S3 and SSM Run Command, with validation and rollback. Implemented; no run recorded yet. |
 | `.github/workflows/deploy.yml` | Legacy deployment to EC2 over SSH on relevant pushes to `main` or manual dispatch. |
 | `.github/workflows/deploy-versioned.yml` | Legacy manual SHA-addressed deployment over SSH with atomic activation, validation, and rollback. |
@@ -26,11 +27,13 @@ This guide holds the repository inventory that is not in the README: files, layo
 
 ```text
 .
-|-- .github/workflows/
-|   |-- deploy-ssm.yml
-|   |-- deploy-versioned.yml
-|   |-- deploy.yml
-|   `-- validate.yml
+|-- .github/
+|   |-- dependabot.yml
+|   `-- workflows/
+|       |-- deploy-ssm.yml
+|       |-- deploy-versioned.yml
+|       |-- deploy.yml
+|       `-- validate.yml
 |-- configs/nginx/
 |-- docs/
 |   |-- 01-architecture.md

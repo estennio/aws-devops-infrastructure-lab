@@ -49,7 +49,7 @@ flowchart LR
 ## Key decisions
 
 - **SSM instead of SSH for deployment**, because the runner then needs no open port 22, no key and no host-key secret. The role is limited to `AWS-RunShellScript` on this one instance.
-- **OIDC instead of an AWS access key**, because there is nothing long-lived to leak or rotate. The trust policy is pinned to this repository and the `production` environment.
+- **OIDC instead of an AWS access key**, because there is nothing long-lived to leak or rotate. The trust policy is pinned to this repository by its immutable GitHub ID and to the `production` environment.
 - **Environment-pinned trust instead of a branch name**, because the environment can require reviewers and restrict deployments to `main`, so a pull request cannot get credentials.
 - **No NAT Gateway, load balancer or database**, because a single public instance meets the goal and those services dominate the cost of a lab ([scope decisions](docs/01-architecture.md)).
 - **Atomic symlink switch instead of copying files in place**, because `mv -T` over `current` swaps releases in one step and keeps the previous release for rollback ([versioned deployment](docs/04-versioned-deployment.md)).

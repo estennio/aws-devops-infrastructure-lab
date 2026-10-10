@@ -105,7 +105,7 @@ The role trusts only `repo:<github_repository>:environment:<github_environment>`
 - EC2 role: `AmazonSSMManagedInstanceCore` plus read-only access (`s3:GetObject`, prefix-limited `s3:ListBucket`) to `releases/`.
 - The release bucket is private, encrypted (SSE-S3), TLS-only, and expires objects after `release_retention_days` (default 30).
 
-The target instance needs the AWS CLI. The deploy command installs it with `snap install aws-cli --classic` when missing.
+The target instance needs the AWS CLI. `scripts/bootstrap.sh` installs it with `snap install aws-cli --classic`; the deploy fails with a clear message if it is missing. An instance bootstrapped before this change needs `sudo bash scripts/bootstrap.sh` run again (it is idempotent and can be sent through SSM).
 
 An account can hold only one provider for `token.actions.githubusercontent.com`. If it already exists, set `create_github_oidc_provider = false`.
 

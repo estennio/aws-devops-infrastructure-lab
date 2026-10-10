@@ -64,7 +64,9 @@ jobs:
           #!/bin/bash
           set -Eeuo pipefail
           staging_dir="/tmp/aws-devops-site/${DEPLOY_SHA}"
-          command -v aws > /dev/null || snap install aws-cli --classic
+          # snap installs the AWS CLI under /snap/bin, which the SSM shell may not have on PATH.
+          export PATH="\${PATH}:/snap/bin"
+          command -v aws > /dev/null || { echo "AWS CLI not found; run scripts/bootstrap.sh on the instance first." >&2; exit 1; }
           rm -rf -- "\${staging_dir}"
           install -d -m 0755 -- "\${staging_dir}"
           aws s3 cp --only-show-errors --region "${AWS_REGION}" --recursive \

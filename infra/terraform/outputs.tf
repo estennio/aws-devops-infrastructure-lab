@@ -54,13 +54,13 @@ output "instance_id" {
 }
 
 output "instance_public_ip" {
-  description = "Current public IPv4 address. It can change because this configuration does not create an Elastic IP."
-  value       = aws_instance.web.public_ip
+  description = "Elastic IP of the web server. It stays the same when the instance is replaced."
+  value       = aws_eip.web.public_ip
 }
 
 output "instance_public_dns" {
-  description = "Current public DNS name assigned by EC2."
-  value       = aws_instance.web.public_dns
+  description = "Public DNS name of the Elastic IP."
+  value       = aws_eip.web.public_dns
 }
 
 output "ubuntu_ami_id" {
@@ -84,13 +84,13 @@ output "ssm_start_session_command" {
 }
 
 output "http_url" {
-  description = "HTTP URL using the current public IPv4 address."
-  value       = "http://${aws_instance.web.public_ip}/"
+  description = "HTTP URL using the Elastic IP."
+  value       = "http://${aws_eip.web.public_ip}/"
 }
 
 output "ssh_target" {
   description = "SSH target when SSH is enabled; null for SSM-only administration."
-  value       = var.enable_ssh ? "ubuntu@${aws_instance.web.public_dns}" : null
+  value       = var.enable_ssh ? "ubuntu@${aws_eip.web.public_dns}" : null
 }
 
 output "github_actions_role_arn" {
@@ -99,6 +99,11 @@ output "github_actions_role_arn" {
 }
 
 output "release_bucket_name" {
-  description = "Name of the release artifact bucket. Store it as the RELEASE_BUCKET repository variable."
+  description = "Name of the release artifact bucket. The deploy workflow reads it from SSM Parameter Store."
   value       = aws_s3_bucket.releases.id
+}
+
+output "deploy_parameter_prefix" {
+  description = "SSM Parameter Store path holding the deploy targets (instance ID, public host, release bucket) read by the deploy workflow."
+  value       = local.deploy_parameter_prefix
 }

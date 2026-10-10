@@ -2,6 +2,12 @@ name: Deploy versioned website via SSM
 
 on:
   workflow_dispatch:
+    inputs:
+      validation_host:
+        description: "Leave empty. Overrides only the host of the external check; 127.0.0.1 forces a failure to test the rollback."
+        required: false
+        default: ""
+        type: string
 
 permissions:
   contents: read
@@ -23,9 +29,10 @@ jobs:
       contents: read
     env:
       AWS_REGION: ${{ vars.AWS_REGION }}
-      RELEASE_BUCKET: ${{ vars.RELEASE_BUCKET }}
-      EC2_INSTANCE_ID: ${{ vars.EC2_INSTANCE_ID }}
-      EC2_HOST: ${{ vars.EC2_HOST }}
+      # Written by Terraform (output deploy_parameter_prefix). The instance ID,
+      # public host and release bucket are read from here at run time.
+      DEPLOY_PARAMETER_PREFIX: ${{ vars.DEPLOY_PARAMETER_PREFIX || '/aws-devops-infrastructure-lab/deploy' }}
+      VALIDATION_HOST_OVERRIDE: ${{ inputs.validation_host }}
       DEPLOY_SHA: ${{ github.sha }}
 
     steps:
@@ -40,6 +47,44 @@ jobs:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
           role-session-name: github-deploy-${{ github.run_id }}
+
+      - name: Resolve deployment targets from Terraform
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          fail() { echo "::error::$*"; exit 1; }
+          prefix="${DEPLOY_PARAMETER_PREFIX%/}"
+
+          response="$(aws ssm get-parameters --output json --names \
+            "${prefix}/instance-id" "${prefix}/public-host" "${prefix}/release-bucket")"
+          missing="$(jq -r '.InvalidParameters | join(", ")' <<< "$response")"
+          [[ -z "$missing" ]] || fail "Missing deploy parameters (${missing}); run terraform apply first."
+
+          parameter() {
+            jq -r --arg name "${prefix}/$1" '.Parameters[] | select(.Name == $name) | .Value' <<< "$response"
+          }
+          instance_id="$(parameter instance-id)"
+          public_host="$(parameter public-host)"
+          release_bucket="$(parameter release-bucket)"
+
+          [[ "$instance_id" =~ ^i-[0-9a-f]{8,17}$ ]] || fail "Unexpected instance ID: ${instance_id}"
+          [[ "$public_host" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]] || fail "Unexpected public host: ${public_host}"
+          [[ "$release_bucket" =~ ^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$ ]] || fail "Unexpected bucket name: ${release_bucket}"
+
+          validation_host="$public_host"
+          if [[ -n "$VALIDATION_HOST_OVERRIDE" ]]; then
+            [[ "$VALIDATION_HOST_OVERRIDE" =~ ^[A-Za-z0-9.-]{1,253}$ ]] || fail "Invalid validation_host input."
+            validation_host="$VALIDATION_HOST_OVERRIDE"
+            echo "::warning::External validation will use ${validation_host} instead of ${public_host}."
+          fi
+
+          {
+            echo "EC2_INSTANCE_ID=${instance_id}"
+            echo "EC2_HOST=${validation_host}"
+            echo "RELEASE_BUCKET=${release_bucket}"
+          } >> "$GITHUB_ENV"
+          echo "Deploying to ${instance_id} (${public_host}) through s3://${release_bucket}."
 
       - name: Package and upload release to S3
         shell: bash

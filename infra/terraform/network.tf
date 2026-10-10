@@ -12,7 +12,7 @@ resource "aws_subnet" "public_a" {
   vpc_id                  = aws_vpc.lab.id
   cidr_block              = var.public_subnet_cidr
   availability_zone       = local.availability_zone
-  map_public_ip_on_launch = true
+  map_public_ip_on_launch = false
 
   lifecycle {
     precondition {
@@ -52,4 +52,27 @@ resource "aws_route" "public_default" {
 resource "aws_route_table_association" "public_a" {
   subnet_id      = aws_subnet.public_a.id
   route_table_id = aws_route_table.public.id
+}
+
+# Created separately from the instance so that its private address and the
+# Elastic IP survive an instance replacement.
+resource "aws_network_interface" "web" {
+  subnet_id       = aws_subnet.public_a.id
+  security_groups = [aws_security_group.web.id]
+  description     = "Primary interface of the lab web server"
+
+  tags = {
+    Name = "${local.name_prefix}-web-eni"
+  }
+}
+
+resource "aws_eip" "web" {
+  domain            = "vpc"
+  network_interface = aws_network_interface.web.id
+
+  tags = {
+    Name = "${local.name_prefix}-web-eip"
+  }
+
+  depends_on = [aws_internet_gateway.lab]
 }

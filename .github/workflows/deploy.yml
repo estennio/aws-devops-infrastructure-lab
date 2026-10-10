@@ -1,13 +1,9 @@
 name: Deploy website to EC2
 
+# Legacy SSH deploy, kept as history until the SSM path has a recorded run.
+# Manual-only: the Terraform-managed instance has SSH disabled by default, so
+# an automatic run on every push to main would fail or target a stale host.
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - "index.html"
-      - "style.css"
-      - ".github/workflows/deploy.yml"
   workflow_dispatch:
 
 permissions:

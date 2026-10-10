@@ -226,6 +226,35 @@ variable "github_repository" {
   }
 }
 
+variable "github_owner_id" {
+  description = "Numeric, immutable ID of the repository owner, used in the OIDC subject. Set both IDs to null only for a repository that still issues the legacy name-only subject. Look it up with: gh api users/<owner> --jq .id"
+  type        = string
+  default     = "263081306"
+  nullable    = true
+
+  validation {
+    condition     = var.github_owner_id == null ? true : can(regex("^[1-9][0-9]*$", var.github_owner_id))
+    error_message = "github_owner_id must be null or a positive numeric GitHub ID."
+  }
+}
+
+variable "github_repository_id" {
+  description = "Numeric, immutable ID of the repository, used in the OIDC subject together with github_owner_id. Look it up with: gh api repos/<owner>/<name> --jq .id"
+  type        = string
+  default     = "1411264152"
+  nullable    = true
+
+  validation {
+    condition     = var.github_repository_id == null ? true : can(regex("^[1-9][0-9]*$", var.github_repository_id))
+    error_message = "github_repository_id must be null or a positive numeric GitHub ID."
+  }
+
+  validation {
+    condition     = (var.github_owner_id == null) == (var.github_repository_id == null)
+    error_message = "Set both github_owner_id and github_repository_id, or neither (legacy subject)."
+  }
+}
+
 variable "github_environment" {
   description = "GitHub environment whose deployments may assume the role. The OIDC subject is pinned to it."
   type        = string

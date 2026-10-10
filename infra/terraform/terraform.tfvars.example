@@ -21,6 +21,11 @@ enable_bootstrap         = true
 bootstrap_repository_url = "https://github.com/estennio/aws-devops-infrastructure-lab.git"
 bootstrap_repository_ref = "main"
 
+# OIDC subject: numeric GitHub IDs for repositories created after 2026-07-15.
+# Set both to null for a repository that still issues the legacy subject.
+# github_owner_id      = "263081306"
+# github_repository_id = "1411264152"
+
 root_volume_size_gib = 8
 
 additional_tags = {}

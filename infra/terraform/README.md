@@ -97,7 +97,13 @@ Commit `.terraform.lock.hcl` after the first successful `terraform init` so prov
 
 ### Trust policy
 
-The role trusts only `repo:<github_repository>:environment:<github_environment>` (default `production`) with audience `sts.amazonaws.com`. An environment subject is preferred over `ref:refs/heads/main` because the environment can require reviewers and limit deployments to `main`, so an unreviewed push or a pull request cannot obtain AWS credentials. Configure the `production` environment in GitHub (Settings, Environments) with required reviewers and a `main`-only deployment branch rule.
+The role trusts only the subject `repo:<owner>@<owner id>/<repo>@<repo id>:environment:<github_environment>` (default `production`) with audience `sts.amazonaws.com`.
+
+GitHub issues this immutable subject format for repositories created after 15 July 2026, including this one. The numeric IDs come from `github_owner_id` and `github_repository_id`, so a deleted and re-created owner or repository with the same name cannot mint a matching token. A pattern such as `repo:<owner>@*/...` would undo that protection, so the IDs are matched exactly. For an older repository that still issues the legacy `repo:<owner>/<repo>:...` subject, set both IDs to `null` in `terraform.tfvars`.
+
+The first deploy run failed with `Not authorized to perform sts:AssumeRoleWithWebIdentity` because the policy expected the legacy subject. CloudTrail recorded the subject GitHub actually sent (`userIdentity.userName` on the denied `AssumeRoleWithWebIdentity` event), which is how the mismatch was found.
+
+ An environment subject is preferred over `ref:refs/heads/main` because the environment can require reviewers and limit deployments to `main`, so an unreviewed push or a pull request cannot obtain AWS credentials. Configure the `production` environment in GitHub (Settings, Environments) with required reviewers and a `main`-only deployment branch rule.
 
 ### Permissions
 

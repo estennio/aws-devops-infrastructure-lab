@@ -13,6 +13,19 @@ locals {
   github_oidc_provider_arn = var.create_github_oidc_provider ? aws_iam_openid_connect_provider.github[0].arn : (
     "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:oidc-provider/${local.github_oidc_url}"
   )
+
+  # Repositories created after 2026-07-15 receive the immutable subject format
+  # repo:<owner>@<owner id>/<repo>@<repo id>:..., so a recycled owner or
+  # repository name cannot mint a matching token. With both IDs unset, the
+  # legacy name-only format repo:<owner>/<repo>:... is used instead.
+  github_owner_name      = split("/", var.github_repository)[0]
+  github_repository_name = split("/", var.github_repository)[1]
+  github_subject_repository = (
+    var.github_owner_id != null && var.github_repository_id != null
+    ? "${local.github_owner_name}@${var.github_owner_id}/${local.github_repository_name}@${var.github_repository_id}"
+    : var.github_repository
+  )
+  github_oidc_subject = "repo:${local.github_subject_repository}:environment:${var.github_environment}"
 }
 
 resource "aws_iam_openid_connect_provider" "github" {
@@ -26,9 +39,10 @@ resource "aws_iam_openid_connect_provider" "github" {
   }
 }
 
-# Trust is pinned to one repository AND one GitHub environment. The environment
-# can require reviewers and restrict deployments to main, which is stricter than
-# trusting a branch name alone. Pull requests and forks cannot match this subject.
+# Trust is pinned to one repository (by immutable ID) AND one GitHub environment.
+# The environment can require reviewers and restrict deployments to main, which
+# is stricter than trusting a branch name alone. Pull requests and forks cannot
+# match this subject.
 data "aws_iam_policy_document" "github_assume_role" {
   statement {
     effect  = "Allow"
@@ -48,7 +62,7 @@ data "aws_iam_policy_document" "github_assume_role" {
     condition {
       test     = "StringEquals"
       variable = "${local.github_oidc_url}:sub"
-      values   = ["repo:${var.github_repository}:environment:${var.github_environment}"]
+      values   = [local.github_oidc_subject]
     }
   }
 }

@@ -54,52 +54,41 @@ atomic_link() {
     mv -Tf -- "${temporary_link}" "${link_path}"
 }
 
-served_version() {
+# Same check as scripts/validate-release.sh, against the local Nginx. Kept inline
+# because this file is installed on its own as /usr/local/sbin/aws-devops-versioned-deploy.
+# HTTPS uses --insecure only to prove encrypted transport with the laboratory
+# certificate; certificate trust is not validated.
+fetch_local() {
     local scheme="$1"
+    local path="$2"
+    local port=80
+    local tls_flags=()
 
     if [[ "${scheme}" == "https" ]]; then
-        curl --insecure --fail --silent --show-error \
-            --noproxy '*' \
-            --resolve "${SERVER_NAME}:443:127.0.0.1" \
-            "https://${SERVER_NAME}/VERSION"
-    else
-        curl --fail --silent --show-error \
-            --noproxy '*' \
-            --resolve "${SERVER_NAME}:80:127.0.0.1" \
-            "http://${SERVER_NAME}/VERSION"
+        port=443
+        tls_flags=(--insecure)
     fi
+
+    curl "${tls_flags[@]}" --fail --silent --show-error \
+        --noproxy '*' \
+        --max-time 30 \
+        --resolve "${SERVER_NAME}:${port}:127.0.0.1" \
+        "${scheme}://${SERVER_NAME}/${path}"
 }
 
 validate_served_release() {
     local expected_version="$1"
-    local http_version
-    local https_version
+    local scheme
+    local file
+    local served_version
 
-    curl --fail --silent --show-error \
-        --noproxy '*' \
-        --resolve "${SERVER_NAME}:80:127.0.0.1" \
-        "http://${SERVER_NAME}/index.html" > /dev/null || return
-    curl --fail --silent --show-error \
-        --noproxy '*' \
-        --resolve "${SERVER_NAME}:80:127.0.0.1" \
-        "http://${SERVER_NAME}/style.css" > /dev/null || return
-    http_version="$(served_version http)" || return
-    [[ "${http_version}" == "${expected_version}" ]] \
-        || return
-
-    printf '%s\n' \
-        "HTTPS uses --insecure only for encrypted transport with the laboratory certificate; certificate trust is not validated."
-    curl --insecure --fail --silent --show-error \
-        --noproxy '*' \
-        --resolve "${SERVER_NAME}:443:127.0.0.1" \
-        "https://${SERVER_NAME}/index.html" > /dev/null || return
-    curl --insecure --fail --silent --show-error \
-        --noproxy '*' \
-        --resolve "${SERVER_NAME}:443:127.0.0.1" \
-        "https://${SERVER_NAME}/style.css" > /dev/null || return
-    https_version="$(served_version https)" || return
-    [[ "${https_version}" == "${expected_version}" ]] \
-        || return
+    for scheme in http https; do
+        for file in index.html style.css; do
+            fetch_local "${scheme}" "${file}" > /dev/null || return
+        done
+        served_version="$(fetch_local "${scheme}" VERSION)" || return
+        [[ "${served_version}" == "${expected_version}" ]] || return
+    done
 }
 
 reload_and_validate() {

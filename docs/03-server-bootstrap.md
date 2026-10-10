@@ -12,7 +12,7 @@ The script does not create or modify AWS resources, Security Groups, IAM permiss
 
 - Ubuntu Server 24.04 LTS with `systemd`;
 - root access through `sudo`;
-- network access to Ubuntu package repositories;
+- network access to Ubuntu package repositories and the Snap Store;
 - the complete repository checkout, including `index.html` and `style.css`;
 - inbound TCP 80 and 443 allowed outside the script if external access is required;
 - local name resolution for `web.lab.test` when testing by hostname.
@@ -29,7 +29,7 @@ The script must run as root because it installs packages, writes under `/etc/ngi
 
 The bootstrap:
 
-1. installs `nginx`, `openssl`, `curl`, and `ca-certificates` with `apt`;
+1. installs `nginx`, `openssl`, `curl`, and `ca-certificates` with `apt`, and the AWS CLI with `snap` (used by the SSM deploy to download releases from S3);
 2. creates `/var/www/html` and publishes `index.html` and `style.css` there;
 3. creates `/etc/nginx/ssl/web.lab.test` with mode `0750`;
 4. generates a 2048-bit RSA, SHA-256, self-signed certificate valid for 365 days only when both certificate files are absent;
@@ -65,7 +65,7 @@ If a check fails, the script stops without overwriting either file. Certificate 
 
 The existing workflow uploads only `index.html` and `style.css`, installs them in `/var/www/html`, executes `nginx -t`, reloads Nginx, and requests `http://127.0.0.1/`.
 
-This configuration preserves that web root and serves HTTP directly, so the workflow's deployment steps do not need to change. Changes limited to `configs/`, `scripts/`, or `docs/` do not match the workflow's current push path filters.
+This configuration preserves that web root and serves HTTP directly, so the workflow's deployment steps do not need to change. The workflow is manual-only; it no longer runs on pushes to `main`.
 
 The optional versioned deployment uses a different document root and requires a deliberate migration after this bootstrap. It is documented separately in [Versioned Deployment and Rollback](04-versioned-deployment.md). Until that migration is performed, `.github/workflows/deploy.yml` is the compatible deployment path and the versioned workflow is not dispatched.
 

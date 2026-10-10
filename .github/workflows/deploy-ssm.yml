@@ -30,12 +30,12 @@ jobs:
 
     steps:
       - name: Checkout workflow commit
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           persist-credentials: false
 
       - name: Configure AWS credentials via OIDC
-        uses: aws-actions/configure-aws-credentials@v4.0.2
+        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4.0.2
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
@@ -64,7 +64,9 @@ jobs:
           #!/bin/bash
           set -Eeuo pipefail
           staging_dir="/tmp/aws-devops-site/${DEPLOY_SHA}"
-          command -v aws > /dev/null || snap install aws-cli --classic
+          # snap installs the AWS CLI under /snap/bin, which the SSM shell may not have on PATH.
+          export PATH="\${PATH}:/snap/bin"
+          command -v aws > /dev/null || { echo "AWS CLI not found; run scripts/bootstrap.sh on the instance first." >&2; exit 1; }
           rm -rf -- "\${staging_dir}"
           install -d -m 0755 -- "\${staging_dir}"
           aws s3 cp --only-show-errors --region "${AWS_REGION}" --recursive \
@@ -82,58 +84,11 @@ jobs:
         run: |
           set -euo pipefail
 
-          validate_external() {
-            local http_sha
-            local https_sha
-
-            curl --fail --silent --show-error \
-              --noproxy '*' \
-              --connect-timeout 10 --max-time 30 \
-              --connect-to "web.lab.test:80:${EC2_HOST}:80" \
-              http://web.lab.test/index.html > /dev/null || return
-            curl --fail --silent --show-error \
-              --noproxy '*' \
-              --connect-timeout 10 --max-time 30 \
-              --connect-to "web.lab.test:80:${EC2_HOST}:80" \
-              http://web.lab.test/style.css > /dev/null || return
-            http_sha="$(curl --fail --silent --show-error \
-              --noproxy '*' \
-              --connect-timeout 10 --max-time 30 \
-              --connect-to "web.lab.test:80:${EC2_HOST}:80" \
-              http://web.lab.test/VERSION)" || return
-            [[ "$http_sha" == "$DEPLOY_SHA" ]] || return
-
-            echo "HTTPS reachability uses --insecure for the laboratory certificate; this does not validate certificate trust."
-            curl --insecure --fail --silent --show-error \
-              --noproxy '*' \
-              --connect-timeout 10 --max-time 30 \
-              --connect-to "web.lab.test:443:${EC2_HOST}:443" \
-              https://web.lab.test/index.html > /dev/null || return
-            curl --insecure --fail --silent --show-error \
-              --noproxy '*' \
-              --connect-timeout 10 --max-time 30 \
-              --connect-to "web.lab.test:443:${EC2_HOST}:443" \
-              https://web.lab.test/style.css > /dev/null || return
-            https_sha="$(curl --insecure --fail --silent --show-error \
-              --noproxy '*' \
-              --connect-timeout 10 --max-time 30 \
-              --connect-to "web.lab.test:443:${EC2_HOST}:443" \
-              https://web.lab.test/VERSION)" || return
-            [[ "$https_sha" == "$DEPLOY_SHA" ]] || return
-          }
-
-          set +e
-          validate_external
-          validation_status=$?
-          set -e
-
-          if (( validation_status != 0 )); then
+          if ! bash scripts/validate-release.sh "$EC2_HOST" "$DEPLOY_SHA"; then
             echo "External validation failed; requesting rollback on EC2 via SSM." >&2
             bash scripts/ssm-run.sh "$EC2_INSTANCE_ID" "$AWS_REGION" \
               "Rollback release ${DEPLOY_SHA}" \
               "/usr/local/sbin/aws-devops-versioned-deploy rollback ${DEPLOY_SHA}" || \
               echo "Rollback command also failed; inspect the server immediately." >&2
-            exit "$validation_status"
+            exit 1
           fi
-
-          echo "External HTTP and HTTPS transport checks serve commit $DEPLOY_SHA."

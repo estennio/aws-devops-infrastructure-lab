@@ -40,6 +40,20 @@ install_packages() {
     apt-get install --yes --no-install-recommends nginx openssl curl ca-certificates
 }
 
+# The SSM deploy downloads releases from S3 with the AWS CLI, so the instance
+# gets it at bootstrap instead of during a deployment. Ubuntu 24.04 ships snapd.
+install_aws_cli() {
+    if command -v aws >/dev/null 2>&1 || [[ -x /snap/bin/aws ]]; then
+        printf 'AWS CLI already installed.\n'
+        return
+    fi
+
+    command -v snap >/dev/null 2>&1 || die "snap is required to install the AWS CLI"
+    # On first boot, cloud-init can run before snapd has finished seeding.
+    snap wait system seed.loaded
+    snap install aws-cli --classic
+}
+
 validate_existing_certificate() {
     local cert_public_key
     local key_public_key
@@ -129,6 +143,7 @@ main() {
     require_root
     require_sources
     install_packages
+    install_aws_cli
     prepare_certificate
     publish_site
     configure_nginx

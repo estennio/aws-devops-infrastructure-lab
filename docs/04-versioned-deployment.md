@@ -4,7 +4,7 @@
 
 This flow adds SHA-addressed releases, atomic activation, validation, and rollback on top of the existing deployment. It is delivered as repository code and is applied to EC2 through the preparation steps below:
 
-- `.github/workflows/deploy.yml` remains the automatic legacy deployment; only shared concurrency coordination is added, while its deployment steps remain unchanged;
+- `.github/workflows/deploy.yml` remains the legacy deployment, now manual-only; only shared concurrency coordination is added, while its deployment steps remain unchanged;
 - `.github/workflows/deploy-versioned.yml` is a separate, manual-only workflow;
 - the versioned workflow is dispatched after the server preparation below succeeds;
 - the EC2 migration and the first versioned run are the next stage of the lab.

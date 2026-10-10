@@ -36,10 +36,9 @@ Rows marked *earlier console-built instance* are screenshots of the infrastructu
 | Certificate SAN | `DNS:web.lab.test` | [`tls/04-server-cert-san.png`](artifacts/tls/04-server-cert-san.png) | Available (earlier console-built instance) |
 | TLS 1.3 | Negotiated protocol | [`tls/05-tls13.png`](artifacts/tls/05-tls13.png) | Available (earlier console-built instance) |
 | Nginx TLS configuration | HTTPS server block | [`tls/06-nginx-tls-config.png`](artifacts/tls/06-nginx-tls-config.png) | Available (earlier console-built instance) |
-| GitHub Actions | Completed run for `Deploy website to EC2`; it verifies only the steps implemented by that workflow | [Run 37144567040](https://github.com/estennio/aws-devops-infrastructure-lab/actions/runs/37144567040), commit `c83425515b175a0dc70bd9a6afd9e52b03933014` | Available |
+| GitHub Actions (SSH, removed) | Completed run for the earlier `Deploy website to EC2` workflow; it verifies only the steps implemented by that workflow | [Run 37144567040](https://github.com/estennio/aws-devops-infrastructure-lab/actions/runs/37144567040), commit `c83425515b175a0dc70bd9a6afd9e52b03933014` | Available |
 | Local HTTP/HTTPS, service state, `nginx -t` | Collector output with exit statuses | Run [`scripts/collect-evidence.sh`](../scripts/collect-evidence.sh) on the server; results are transcribed in the verification document | Recorded |
-| OIDC and SSM GitHub Actions deploy | Manual run, S3 upload, SSM output, served SHA, and a rollback test | `.github/workflows/deploy-ssm.yml` | Next stage |
-| Versioned GitHub Actions deploy (SSH) | Manual run showing the expected SHA over local and external HTTP/HTTPS, including any rollback result | `.github/workflows/deploy-versioned.yml` | Next stage |
+| OIDC and SSM GitHub Actions deploy | Approved manual runs with SSH disabled: a deploy, a deliberate external-validation failure that rolled back through SSM, and a redeploy; served `VERSION` checked from outside after each | [`deployment/01-ssm-deploy-and-rollback.txt`](artifacts/deployment/01-ssm-deploy-and-rollback.txt), runs listed below | Available |
 | Terraform | Plan, outputs, live HTTP/HTTPS and SSM checks | `infra/terraform/` | [`artifacts/terraform/`](artifacts/terraform/) |
 | Current instance: Nginx, listeners, `nginx -t`, HTTP/HTTPS | Collector output with exit statuses, run through SSM Run Command | [`05-server-evidence.txt`](artifacts/terraform/05-server-evidence.txt) | Available |
 | Current instance: TLS 1.3 and certificate | Forced TLS 1.3 handshake; self-signed certificate, `CN`/`SAN` `web.lab.test`, issuer equal to subject (no CA chain) | [`05-server-evidence.txt`](artifacts/terraform/05-server-evidence.txt) | Available |
@@ -60,6 +59,17 @@ The following successful runs were verified through the repository's public GitH
 | 2026-10-01 15:25:57 | `workflow_dispatch` | `bf37106261cebdb992c87719b6d2a0f211542d4f` | [36884204089](https://github.com/estennio/aws-devops-infrastructure-lab/actions/runs/36884204089) |
 
 Public API source: [workflow runs](https://api.github.com/repos/estennio/aws-devops-infrastructure-lab/actions/runs?per_page=100).
+
+## OIDC and SSM deployment runs
+
+Workflow `Deploy versioned website via SSM`, environment `production` (required reviewer, `main` only). Details, log excerpts and the external `VERSION` checks are in [`deployment/01-ssm-deploy-and-rollback.txt`](artifacts/deployment/01-ssm-deploy-and-rollback.txt). GitHub keeps workflow logs for a limited time; the transcript is the durable record.
+
+| Run | Commit | Result |
+|---|---|---|
+| [#1, attempt 1](https://github.com/estennio/aws-devops-infrastructure-lab/actions/runs/38016600883/attempts/1) | `e66bae9` | Denied `sts:AssumeRoleWithWebIdentity`: the trust policy expected the legacy OIDC subject (fixed in #11) |
+| [#1, attempt 2](https://github.com/estennio/aws-devops-infrastructure-lab/actions/runs/38016600883/attempts/2) | `e66bae9` | Success: release uploaded to S3, activated through SSM, validated over HTTP and HTTPS |
+| [#2, attempt 1](https://github.com/estennio/aws-devops-infrastructure-lab/actions/runs/38018487761/attempts/1) | `e234bb0` | Failed on purpose (`EC2_HOST=127.0.0.1`); rollback through SSM succeeded and the instance served `e66bae9` again |
+| [#2, attempt 2](https://github.com/estennio/aws-devops-infrastructure-lab/actions/runs/38018487761/attempts/2) | `e234bb0` | Success after restoring `EC2_HOST`; the instance serves `e234bb0` |
 
 ## Server collection
 

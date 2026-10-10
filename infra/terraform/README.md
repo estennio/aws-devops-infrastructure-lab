@@ -127,16 +127,18 @@ Nothing here is secret. Create these repository (or `production` environment) **
 | `EC2_INSTANCE_ID` | `terraform output instance_id` |
 | `EC2_HOST` | current public address of the instance (`terraform output`) |
 
-The SSH-based `deploy-versioned.yml` still uses the secrets `EC2_SSH_KEY`, `EC2_KNOWN_HOSTS`, `EC2_HOST`, and `EC2_USER`. Keep them until the SSM path is validated.
+The SSH-based workflows and their secrets (`EC2_SSH_KEY`, `EC2_KNOWN_HOSTS`, `EC2_HOST`, `EC2_USER`) were removed after the SSM path was validated; nothing in this repository reads them any more.
 
 ### Validate before removing the SSH path
+
+Steps 1 to 3 and the rollback test in step 4 were completed on the current instance with SSH already disabled (see the [evidence index](../../evidence/README.md#oidc-and-ssm-deployment-runs)). The rollback test set `EC2_HOST` to `127.0.0.1` for one run, so the release activated on the instance and the external validation failed. A run from outside the `production` environment has not been tested yet. Step 5 was skipped because the instance has no SSH path to compare with.
 
 1. Review `terraform plan` and apply it deliberately; confirm the instance appears as an `Online` SSM managed node.
 2. Create the `production` environment and the variables above.
 3. Run **Deploy versioned website via SSM** manually and confirm the S3 upload, the SSM output in the log, and the served `VERSION`.
 4. Test the failure path: deploy a release that fails external validation (for example, stop Nginx temporarily) and confirm that rollback is requested; also confirm that a run from a non-`production` context cannot assume the role.
 5. Run both workflows once with SSH still enabled to compare results, then repeat the SSM run with `enable_ssh = false` (no port 22 rule).
-6. Only then delete `deploy-versioned.yml`, the SSH secrets, and any SSH ingress CIDRs.
+6. Only then delete `deploy-versioned.yml`, the SSH secrets, and any SSH ingress CIDRs. (Done: both SSH workflows were removed, and the instance has no SSH ingress rule.)
 
 ## Create a new environment
 

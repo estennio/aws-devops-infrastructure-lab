@@ -10,10 +10,9 @@ This guide holds the repository inventory that is not in the README: files, layo
 | `.github/workflows/validate.yml` | PR and `main` validation: `terraform fmt`/`validate` and TFLint on `infra/terraform` and `infra/bootstrap`, ShellCheck, and a Trivy config scan. |
 | `.github/dependabot.yml` | Weekly update PRs for the SHA-pinned workflow actions and the Terraform providers. |
 | `.github/workflows/deploy-ssm.yml` | Manual deployment through GitHub OIDC, S3 and SSM Run Command, with validation and rollback. Deploy, rollback test and redeploy recorded in the evidence index. |
-| `configs/nginx/web.lab.test.conf` | HTTP/HTTPS virtual host serving `/var/www/html` with TLS 1.2/1.3. |
-| `configs/nginx/web.lab.test.versioned.conf` | Virtual host serving the atomic `current` release link. |
-| `scripts/bootstrap.sh` | Idempotent Ubuntu 24.04 bootstrap: Nginx, site files, and certificate. |
-| `scripts/prepare-versioned-deploy.sh`, `scripts/versioned-deploy.sh` | Server migration to the release layout, plus release activation and rollback. |
+| `configs/nginx/web.lab.test.versioned.conf` | HTTP/HTTPS virtual host (TLS 1.2/1.3) serving the atomic `current` release link. |
+| `scripts/bootstrap.sh` | Idempotent Ubuntu 24.04 bootstrap: Nginx, certificate, deploy command, and the release layout with a first release. |
+| `scripts/versioned-deploy.sh` | Release activation and rollback, installed on the server as `/usr/local/sbin/aws-devops-versioned-deploy`. |
 | `scripts/ssm-run.sh` | Sends a script through SSM Run Command, waits, prints stdout and stderr, and fails on a non-success status. |
 | `scripts/validate-release.sh` | Checks from the runner that a host serves `index.html`, `style.css` and the expected `VERSION` over HTTP and HTTPS; shared by the versioned deploy workflows. |
 | `scripts/collect-evidence.sh` | Collector for non-sensitive operational evidence with per-check exit statuses. |

@@ -7,12 +7,21 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 readonly SCRIPT_DIR
 REPO_ROOT="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
 readonly REPO_ROOT
-readonly WEB_ROOT="/var/www/html"
+readonly DEPLOY_ROOT="/var/www/aws-devops-infrastructure-lab"
+readonly RELEASES_DIR="${DEPLOY_ROOT}/releases"
+readonly CURRENT_LINK="${DEPLOY_ROOT}/current"
+readonly SITE_CONFIG_SOURCE="${REPO_ROOT}/configs/nginx/web.lab.test.versioned.conf"
 readonly SITE_AVAILABLE="/etc/nginx/sites-available/${SERVER_NAME}.conf"
 readonly SITE_ENABLED="/etc/nginx/sites-enabled/${SERVER_NAME}.conf"
+readonly DEPLOY_COMMAND_SOURCE="${REPO_ROOT}/scripts/versioned-deploy.sh"
+readonly DEPLOY_COMMAND="/usr/local/sbin/aws-devops-versioned-deploy"
 readonly TLS_DIR="/etc/nginx/ssl/${SERVER_NAME}"
 readonly TLS_KEY="${TLS_DIR}/${SERVER_NAME}.key"
 readonly TLS_CERT="${TLS_DIR}/${SERVER_NAME}.crt"
+readonly VALIDATION_ATTEMPTS=10
+# Copy of the site file that was active before this run, kept only when this
+# run replaces a different configuration, so a failed check can restore it.
+PREVIOUS_SITE_BACKUP=""
 
 die() {
     printf 'Error: %s\n' "$*" >&2
@@ -29,7 +38,8 @@ require_sources() {
     for source_file in \
         "${REPO_ROOT}/index.html" \
         "${REPO_ROOT}/style.css" \
-        "${REPO_ROOT}/configs/nginx/web.lab.test.conf"; do
+        "${SITE_CONFIG_SOURCE}" \
+        "${DEPLOY_COMMAND_SOURCE}"; do
         [[ -f "${source_file}" ]] || die "required repository file not found: ${source_file}"
     done
 }
@@ -116,27 +126,138 @@ prepare_certificate() {
     chmod 0644 "${TLS_CERT}"
 }
 
-publish_site() {
-    install -d -o root -g root -m 0755 "${WEB_ROOT}"
-    install -o root -g root -m 0644 "${REPO_ROOT}/index.html" "${WEB_ROOT}/index.html"
-    install -o root -g root -m 0644 "${REPO_ROOT}/style.css" "${WEB_ROOT}/style.css"
+# The release name is the commit SHA of the checkout, so the first release has
+# the same name a deployment of that commit would use. Outside a Git checkout
+# (for example a downloaded archive) a timestamped name is used instead.
+initial_release_name() {
+    local sha
+
+    if sha="$(git -c safe.directory="${REPO_ROOT}" -C "${REPO_ROOT}" rev-parse HEAD 2>/dev/null)" \
+        && [[ "${sha}" =~ ^[0-9a-f]{40}$ ]]; then
+        printf '%s\n' "${sha}"
+    else
+        printf 'bootstrap-%s\n' "$(date -u +%Y%m%dT%H%M%SZ)"
+    fi
+}
+
+# Creates the first release only when no release is active. On a server that
+# already has one, the deployed release is kept: re-running the bootstrap must
+# never roll a deployment back to the repository checkout.
+prepare_initial_release() {
+    local release_name
+    local release_dir
+    local temporary_release
+
+    install -d -o root -g root -m 0755 -- "${DEPLOY_ROOT}" "${RELEASES_DIR}"
+
+    if [[ -L "${CURRENT_LINK}" ]]; then
+        [[ -f "$(readlink -f -- "${CURRENT_LINK}")/VERSION" ]] \
+            || die "current release link is broken or has no VERSION; inspect ${DEPLOY_ROOT} manually"
+        printf 'Keeping the active release %s.\n' "$(<"${CURRENT_LINK}/VERSION")"
+        return
+    fi
+    [[ ! -e "${CURRENT_LINK}" ]] || die "${CURRENT_LINK} exists but is not a symlink"
+
+    release_name="$(initial_release_name)"
+    release_dir="${RELEASES_DIR}/${release_name}"
+
+    if [[ ! -d "${release_dir}" ]]; then
+        temporary_release="${RELEASES_DIR}/.${release_name}.${BASHPID}"
+        rm -rf -- "${temporary_release}"
+        install -d -o root -g root -m 0755 -- "${temporary_release}"
+        install -o root -g root -m 0644 -- \
+            "${REPO_ROOT}/index.html" \
+            "${REPO_ROOT}/style.css" \
+            "${temporary_release}/"
+        printf '%s\n' "${release_name}" > "${temporary_release}/VERSION"
+        chmod 0644 "${temporary_release}/VERSION"
+        mv -- "${temporary_release}" "${release_dir}"
+    fi
+
+    ln -s -- "${release_dir}" "${CURRENT_LINK}"
+    printf 'Created the initial release %s.\n' "${release_name}"
+}
+
+install_deployment_command() {
+    install -o root -g root -m 0755 -- "${DEPLOY_COMMAND_SOURCE}" "${DEPLOY_COMMAND}"
+}
+
+restore_previous_site() {
+    [[ -n "${PREVIOUS_SITE_BACKUP}" ]] || return 0
+
+    printf 'Restoring the previous Nginx site configuration.\n' >&2
+    install -o root -g root -m 0644 -- "${PREVIOUS_SITE_BACKUP}" "${SITE_AVAILABLE}"
+    nginx -t && systemctl reload nginx
 }
 
 configure_nginx() {
-    install -o root -g root -m 0644 \
-        "${REPO_ROOT}/configs/nginx/web.lab.test.conf" \
-        "${SITE_AVAILABLE}"
-    ln -sfn "${SITE_AVAILABLE}" "${SITE_ENABLED}"
-    rm -f /etc/nginx/sites-enabled/default
+    if [[ -f "${SITE_AVAILABLE}" ]] && ! cmp -s -- "${SITE_CONFIG_SOURCE}" "${SITE_AVAILABLE}"; then
+        PREVIOUS_SITE_BACKUP="$(mktemp)"
+        install -m 0600 -- "${SITE_AVAILABLE}" "${PREVIOUS_SITE_BACKUP}"
+    fi
 
-    nginx -t
+    install -o root -g root -m 0644 -- "${SITE_CONFIG_SOURCE}" "${SITE_AVAILABLE}"
+    ln -sfn -- "${SITE_AVAILABLE}" "${SITE_ENABLED}"
+    rm -f -- /etc/nginx/sites-enabled/default
+
+    if ! nginx -t; then
+        restore_previous_site
+        die "the versioned Nginx configuration failed nginx -t"
+    fi
+
     systemctl enable nginx
-
     if systemctl is-active --quiet nginx; then
         systemctl reload nginx
     else
         systemctl start nginx
     fi
+}
+
+# HTTPS uses --insecure only to prove encrypted transport with the laboratory
+# certificate; certificate trust is not validated.
+served_version_matches() {
+    local expected_version="$1"
+    local scheme
+    local port
+    local tls_flags
+    local served_version
+
+    for scheme in http https; do
+        port=80
+        tls_flags=()
+        if [[ "${scheme}" == "https" ]]; then
+            port=443
+            tls_flags=(--insecure)
+        fi
+
+        served_version="$(curl "${tls_flags[@]}" --fail --silent \
+            --noproxy '*' \
+            --max-time 10 \
+            --resolve "${SERVER_NAME}:${port}:127.0.0.1" \
+            "${scheme}://${SERVER_NAME}/VERSION")" || return
+        [[ "${served_version}" == "${expected_version}" ]] || return
+    done
+}
+
+# `systemctl reload nginx` only signals the master process and returns at once,
+# so old workers can briefly keep serving the previous root. Retry for a short
+# window instead of trusting a single immediate check.
+validate_served_release() {
+    local expected_version
+    local attempt
+
+    expected_version="$(<"${CURRENT_LINK}/VERSION")"
+
+    for ((attempt = 1; attempt <= VALIDATION_ATTEMPTS; attempt++)); do
+        if served_version_matches "${expected_version}"; then
+            printf 'HTTP and HTTPS serve release %s (attempt %d).\n' "${expected_version}" "${attempt}"
+            return 0
+        fi
+        sleep 1
+    done
+
+    restore_previous_site
+    die "release ${expected_version} was not served over HTTP and HTTPS after ${VALIDATION_ATTEMPTS} attempts"
 }
 
 main() {
@@ -145,8 +266,13 @@ main() {
     install_packages
     install_aws_cli
     prepare_certificate
-    publish_site
+    prepare_initial_release
+    install_deployment_command
     configure_nginx
+    validate_served_release
+    if [[ -n "${PREVIOUS_SITE_BACKUP}" ]]; then
+        rm -f -- "${PREVIOUS_SITE_BACKUP}"
+    fi
     printf 'Nginx bootstrap completed for http://%s and https://%s.\n' \
         "${SERVER_NAME}" "${SERVER_NAME}"
 }

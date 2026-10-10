@@ -2,7 +2,7 @@
 
 ## Scope
 
-`scripts/bootstrap.sh` and `configs/nginx/web.lab.test.conf` provide a reproducible server configuration for Ubuntu Server 24.04 LTS, prepared from the laboratory's documented procedures and paths.
+`scripts/bootstrap.sh` and `configs/nginx/web.lab.test.versioned.conf` provide a reproducible server configuration for Ubuntu Server 24.04 LTS, prepared from the laboratory's documented procedures and paths.
 
 They describe how to build the server again; they are not an export of the running EC2 instance.
 
@@ -23,22 +23,25 @@ Run from anywhere inside the checked-out repository with:
 sudo bash scripts/bootstrap.sh
 ```
 
-The script must run as root because it installs packages, writes under `/etc/nginx` and `/var/www`, changes file ownership and permissions, and controls the Nginx systemd service. The file may also be marked executable and invoked with `sudo ./scripts/bootstrap.sh`.
+The script must run as root because it installs packages, writes under `/etc/nginx`, `/var/www` and `/usr/local/sbin`, changes file ownership and permissions, and controls the Nginx systemd service. The file may also be marked executable and invoked with `sudo ./scripts/bootstrap.sh`.
 
 ## Actions performed
 
 The bootstrap:
 
 1. installs `nginx`, `openssl`, `curl`, and `ca-certificates` with `apt`, and the AWS CLI with `snap` (used by the SSM deploy to download releases from S3);
-2. creates `/var/www/html` and publishes `index.html` and `style.css` there;
-3. creates `/etc/nginx/ssl/web.lab.test` with mode `0750`;
-4. generates a 2048-bit RSA, SHA-256, self-signed certificate valid for 365 days only when both certificate files are absent;
-5. sets the certificate CN to `web.lab.test` and its SAN to `DNS:web.lab.test`;
-6. installs the versioned site configuration in `/etc/nginx/sites-available/web.lab.test.conf`;
-7. enables it with a single symlink in `/etc/nginx/sites-enabled` and removes Ubuntu's default enabled-site symlink;
-8. runs `nginx -t` before reloading an active service or starting an inactive one.
+2. creates `/etc/nginx/ssl/web.lab.test` with mode `0750`;
+3. generates a 2048-bit RSA, SHA-256, self-signed certificate valid for 365 days only when both certificate files are absent;
+4. sets the certificate CN to `web.lab.test` and its SAN to `DNS:web.lab.test`;
+5. creates the release layout under `/var/www/aws-devops-infrastructure-lab` and, only when no release is active yet, a first release from `index.html` and `style.css` named after the checked-out commit SHA (or `bootstrap-<UTC timestamp>` outside a Git checkout), with `current` pointing to it;
+6. installs `scripts/versioned-deploy.sh` as `/usr/local/sbin/aws-devops-versioned-deploy`, the command the deploy workflow runs through SSM;
+7. installs the versioned site configuration in `/etc/nginx/sites-available/web.lab.test.conf`, enables it with a single symlink in `/etc/nginx/sites-enabled`, and removes Ubuntu's default enabled-site symlink;
+8. runs `nginx -t` before reloading an active service or starting an inactive one;
+9. checks over local HTTP and HTTPS that the active release's `VERSION` is served, retrying for up to 10 seconds because `systemctl reload` returns before the old Nginx workers exit.
 
-HTTP and HTTPS both serve `/var/www/html`. TLS 1.2 and TLS 1.3 are enabled; TLS 1.3 is therefore supported without excluding compatible TLS 1.2 clients.
+If `nginx -t` or the final check fails after the site file was changed, the previous site file is restored and Nginx is reloaded.
+
+HTTP and HTTPS both serve the `current` release link. TLS 1.2 and TLS 1.3 are enabled; TLS 1.3 is therefore supported without excluding compatible TLS 1.2 clients.
 
 ## Certificate and repeat execution behavior
 
@@ -63,9 +66,9 @@ If a check fails, the script stops without overwriting either file. Certificate 
 
 ## Relationship with the versioned deployment
 
-The bootstrap serves `/var/www/html`. Releases deployed by `.github/workflows/deploy-ssm.yml` need the versioned layout instead, which [Versioned Deployment and Rollback](04-versioned-deployment.md) installs as a one-time migration after this bootstrap.
+The bootstrap leaves the server in the layout that `.github/workflows/deploy-ssm.yml` expects, so a new instance can receive deployments with no manual step. See [Versioned Deployment and Rollback](04-versioned-deployment.md).
 
-Do not run the bootstrap again after that migration: it reinstalls the legacy site configuration, so Nginx would serve `/var/www/html` instead of the `current` release. It is still safe to run before the migration, for example to install the AWS CLI on an older instance.
+Running the bootstrap again is safe. When a release is already active, it is kept: the bootstrap never replaces a deployed release with the repository checkout. On an older server that still serves `/var/www/html`, a run converts it to the versioned layout. Earlier versions of this repository needed a separate migration script for that step; it was removed and remains in the Git history.
 
 ## Verification on the server
 

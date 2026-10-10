@@ -78,7 +78,10 @@ Variables, import of existing resources, the OIDC deploy setup and cost notes: [
 
 ## Lessons learned
 
-<!-- TODO: to be written by the author. -->
+- **A reload is not a restart.** My first migration to the versioned layout rolled itself back with a 404, although the new Nginx configuration was correct. `systemctl reload nginx` only signals the master process and returns at once, so the check that ran right after it reached an old worker still serving `/var/www/html`. Retrying the check for a few seconds fixed it, and the second run passed on its second attempt.
+- **Read what the cloud actually received.** The first deploy was denied `sts:AssumeRoleWithWebIdentity` even though the trust policy matched GitHub's documentation as I knew it. CloudTrail showed the real OIDC subject: for repositories created after July 2026, GitHub includes the owner and repository IDs. I matched those IDs exactly instead of using a wildcard, because a wildcard would accept a recycled repository name.
+- **A rollback only counts once it has run.** I made the external validation fail on purpose by pointing it at `127.0.0.1`. The release activated on the instance, the check failed, the workflow rolled back through SSM, and the site served the previous commit again. Before that test, the rollback was only code.
+- **Removing SSH changed the whole deploy path.** With no port 22 and no stored key, every server action goes through IAM and SSM. The permissions became explicit (one instance, one SSM document, one S3 prefix), and each action leaves a record in CloudTrail and in the SSM command history.
 
 ## Limitations and next steps
 

@@ -131,6 +131,8 @@ The SSH-based `deploy-versioned.yml` still uses the secrets `EC2_SSH_KEY`, `EC2_
 
 ### Validate before removing the SSH path
 
+Steps 1 to 3 and the rollback test in step 4 were completed on the current instance with SSH already disabled (see the [evidence index](../../evidence/README.md#oidc-and-ssm-deployment-runs)). The rollback test set `EC2_HOST` to `127.0.0.1` for one run, so the release activated on the instance and the external validation failed. A run from outside the `production` environment has not been tested yet. Step 5 was skipped because the instance has no SSH path to compare with.
+
 1. Review `terraform plan` and apply it deliberately; confirm the instance appears as an `Online` SSM managed node.
 2. Create the `production` environment and the variables above.
 3. Run **Deploy versioned website via SSM** manually and confirm the S3 upload, the SSM output in the log, and the served `VERSION`.

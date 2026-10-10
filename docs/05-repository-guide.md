@@ -9,7 +9,7 @@ This guide holds the repository inventory that is not in the README: files, layo
 | `index.html`, `style.css` | Static portfolio page describing the lab, responsive and dependency-free. |
 | `.github/workflows/validate.yml` | PR and `main` validation: `terraform fmt`/`validate` and TFLint on `infra/terraform` and `infra/bootstrap`, ShellCheck, and a Trivy config scan. |
 | `.github/dependabot.yml` | Weekly update PRs for the SHA-pinned workflow actions and the Terraform providers. |
-| `.github/workflows/deploy-ssm.yml` | Manual deployment through GitHub OIDC, S3 and SSM Run Command, with validation and rollback. Implemented; no run recorded yet. |
+| `.github/workflows/deploy-ssm.yml` | Manual deployment through GitHub OIDC, S3 and SSM Run Command, with validation and rollback. Deploy, rollback test and redeploy recorded in the evidence index. |
 | `.github/workflows/deploy.yml` | Legacy deployment to EC2 over SSH, manual dispatch only (its push trigger was removed because Terraform leaves SSH disabled). |
 | `.github/workflows/deploy-versioned.yml` | Legacy manual SHA-addressed deployment over SSH with atomic activation, validation, and rollback. |
 | `configs/nginx/web.lab.test.conf` | HTTP/HTTPS virtual host serving `/var/www/html` with TLS 1.2/1.3. |

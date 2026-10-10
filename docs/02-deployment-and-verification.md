@@ -163,8 +163,8 @@ The repository also contains the separate `Deploy versioned website to EC2` work
 |---|---|---|
 | Static HTML/CSS site | Implemented | Served over HTTP and HTTPS |
 | GitHub Actions SSH deployment | Implemented | Successful runs linked in the evidence index |
-| Versioned deployment and rollback | Implemented (manual workflow and server scripts) | Runs after the EC2 migration (next stage) |
-| OIDC and SSM deployment | Implemented (`deploy-ssm.yml`, `github-oidc.tf`) | No run recorded yet |
+| Versioned deployment and rollback | Server migrated to the release layout | Activation, automatic rollback and redeploy recorded through the SSM workflow |
+| OIDC and SSM deployment | Implemented (`deploy-ssm.yml`, `github-oidc.tf`) | Deploy, deliberate failure with rollback, and redeploy recorded ([`01-ssm-deploy-and-rollback.txt`](../evidence/artifacts/deployment/01-ssm-deploy-and-rollback.txt)) |
 | VPC, subnet, Internet Gateway, route table, Security Group | Terraform configuration | Applied from scratch; outputs in `evidence/artifacts/terraform/`; earlier console screenshots committed |
 | EC2, Ubuntu 24.04 LTS, and SSM IAM profile | Terraform configuration | Applied from scratch; instance `Online` in SSM (`evidence/artifacts/terraform/`) |
 | Session Manager and SSM Run Command | Terraform-managed instance profile | `Online` and a successful Run Command collection recorded for the current instance; session screenshots are from the earlier instance |
@@ -181,5 +181,5 @@ The [evidence index](../evidence/README.md) is the source of truth for the artif
 
 ## Next steps
 
-1. Migrate EC2 to the versioned release layout and record a versioned deployment run.
+1. Make `bootstrap.sh` aware of the versioned layout, so re-running it cannot reinstall the legacy Nginx site.
 2. Optionally add a publicly trusted domain and certificate.

@@ -1,0 +1,103 @@
+First OIDC + SSM deployment, rollback test and redeploy
+=======================================================
+
+Transcribed from the operator session on 2026-10-10 (UTC). Times are UTC.
+The AWS account ID is replaced with <account-id>. Commands were run on the
+instance through Session Manager, or from the operator's workstation.
+
+Instance: i-041c6cfc9e5181d4c (us-east-2), SSH disabled (no port 22 rule).
+Workflow: .github/workflows/deploy-ssm.yml ("Deploy versioned website via SSM")
+GitHub environment: production (required reviewer, main-only deployments)
+
+
+1. Server migration to the versioned layout
+-------------------------------------------
+
+02:09  First attempt (commit 1534635) rolled itself back:
+
+    curl: (22) The requested URL returned error: 404
+    Versioned site validation failed; restoring the previous Nginx configuration.
+    Error: migration validation failed; the legacy Nginx configuration was restored
+
+Cause: `systemctl reload nginx` returns before the old workers exit. The check
+ran immediately and reached a worker still serving /var/www/html, which has no
+VERSION. A manual switch with a 2-second wait served the expected version:
+
+    legacy-20261010T020952Z
+
+Fixed in commit e66bae9 (#10): retry the VERSION check for up to 10 seconds.
+
+02:18  Second attempt (commit e66bae9):
+
+    Versioned site serves legacy-20261010T020952Z over HTTP and HTTPS (attempt 2).
+    Versioned deployment preparation completed for user ubuntu.
+
+
+2. Run #1, attempt 1: OIDC role assumption denied
+-------------------------------------------------
+
+Run: https://github.com/estennio/aws-devops-infrastructure-lab/actions/runs/38016600883/attempts/1
+
+    Error: Could not assume role with OIDC: Not authorized to perform sts:AssumeRoleWithWebIdentity
+
+CloudTrail (us-east-2), event AssumeRoleWithWebIdentity, 02:21:56:
+
+    "errorCode": "AccessDenied"
+    "userName": "repo:estennio@263081306/aws-devops-infrastructure-lab@1411264152:environment:production"
+
+The trust policy expected the legacy subject
+`repo:estennio/aws-devops-infrastructure-lab:environment:production`.
+GitHub issues the immutable subject (owner and repository IDs) for
+repositories created after 2026-07-15. Fixed in commit e234bb0 (#11); the
+Terraform plan changed only `assume_role_policy` (0 add, 1 change, 0 destroy).
+
+
+3. Run #1, attempt 2: deploy succeeded
+--------------------------------------
+
+Run: https://github.com/estennio/aws-devops-infrastructure-lab/actions/runs/38016600883/attempts/2
+
+    Status: Success (52s), approved by estennio for environment production
+    Deployed commit: e66bae97f0aec00c5860399bb9eb4f65d2b5ff62
+
+
+4. Run #2, attempt 1: rollback test
+-----------------------------------
+
+Run: https://github.com/estennio/aws-devops-infrastructure-lab/actions/runs/38018487761/attempts/1
+
+The EC2_HOST variable was set to 127.0.0.1 on purpose, so the release was
+activated on the instance and the runner's external validation then failed.
+
+    curl: (7) Failed to connect to 127.0.0.1 port 80 after 0 ms: Couldn't connect to server
+    Error: HTTP request for index.html failed
+    External validation failed; requesting rollback on EC2 via SSM.
+    SSM command fe19f2f2-3022-460c-b3a2-abaf697d15bc sent to i-041c6cfc9e5181d4c.
+    SSM command fe19f2f2-3022-460c-b3a2-abaf697d15bc succeeded.
+    Error: Process completed with exit code 1.
+
+External check from the workstation after the run (02:53):
+
+    > curl.exe -k --resolve web.lab.test:443:<public-ip> https://web.lab.test/VERSION
+    e66bae97f0aec00c5860399bb9eb4f65d2b5ff62
+
+The instance served the previous release again: the rollback worked.
+
+
+5. Run #2, attempt 2: redeploy succeeded
+----------------------------------------
+
+Run: https://github.com/estennio/aws-devops-infrastructure-lab/actions/runs/38018487761/attempts/2
+
+EC2_HOST restored to the instance's public address; re-run at 02:55.
+
+    Status: Success (30s)
+    Deployed commit: e234bb09a2e6d5f3d378ff27590f91f9656deaec
+
+External check from the workstation (02:56):
+
+    > curl.exe -k --resolve web.lab.test:443:<public-ip> https://web.lab.test/VERSION
+    e234bb09a2e6d5f3d378ff27590f91f9656deaec
+
+HTTPS checks use -k for the self-signed laboratory certificate: they prove
+encrypted transport and the served version, not certificate trust.

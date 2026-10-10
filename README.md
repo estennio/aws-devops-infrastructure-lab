@@ -6,7 +6,7 @@ A small, fully Terraform-managed AWS stack that serves a static site over HTTPS,
 
 ## Summary
 
-I wanted to practice the full path from an empty AWS account to a verified HTTPS endpoint, without the console. I built a custom VPC and an Ubuntu EC2 instance in `us-east-2`, all as Terraform, with Nginx and TLS 1.3 configured on first boot. A GitHub Actions deployment over OIDC and SSM Run Command (no SSH, no stored AWS keys) is set up and implemented but has not run yet. CI validates every change.
+I wanted to practice the full path from an empty AWS account to a verified HTTPS endpoint, without the console. I built a custom VPC and an Ubuntu EC2 instance in `us-east-2`, all as Terraform, with Nginx and TLS 1.3 configured on first boot. A GitHub Actions deployment over OIDC and SSM Run Command (no SSH, no stored AWS keys) deploys a commit after manual approval, and I tested its automatic rollback by making a deploy fail on purpose. CI validates every change.
 
 **Stack:** AWS (VPC, EC2, IAM, S3, SSM), Terraform, GitHub Actions, Nginx, Bash.
 
@@ -44,7 +44,7 @@ flowchart LR
 - **TLS:** Nginx serves HTTPS with TLS 1.3 negotiated on the current instance, using the self-signed certificate (`CN`/`SAN` `web.lab.test`) that [`bootstrap.sh`](scripts/bootstrap.sh) generates ([evidence](evidence/artifacts/terraform/05-server-evidence.txt)). The earlier console-built instance used a laboratory Root CA; that chain is historical only.
 - **First-boot configuration:** `user_data` clones this repository and runs the idempotent [`scripts/bootstrap.sh`](scripts/bootstrap.sh); I recorded HTTP and HTTPS `200 OK`, an `Online` SSM node, `nginx -t`, the 80/443 listeners and a server evidence run over SSM Run Command on the resulting instance ([evidence](evidence/artifacts/terraform/)).
 - **CI:** [`validate.yml`](.github/workflows/validate.yml) runs `terraform fmt`, `validate` and TFLint on both Terraform roots, ShellCheck and a Trivy config scan on every PR. Every action is pinned to a commit SHA, and [Dependabot](.github/dependabot.yml) proposes updates for actions and Terraform providers.
-- **Deploy with rollback (implemented, not yet run):** [`deploy-ssm.yml`](.github/workflows/deploy-ssm.yml) is written to upload a SHA-addressed release to S3, activate it on the instance through SSM, validate HTTP/HTTPS from the runner, and roll back on failure ([design](docs/04-versioned-deployment.md)).
+- **Deploy with rollback (verified):** [`deploy-ssm.yml`](.github/workflows/deploy-ssm.yml) uploads a SHA-addressed release to S3, activates it on the instance through SSM, validates HTTP/HTTPS from the runner, and rolls back on failure ([design](docs/04-versioned-deployment.md)). Each run waits for approval on the `production` environment. A deploy, a deliberate failure that rolled back, and a redeploy are recorded with SSH disabled ([runs and transcript](evidence/README.md#oidc-and-ssm-deployment-runs)).
 
 ## Key decisions
 
@@ -84,7 +84,7 @@ Variables, import of existing resources, the OIDC deploy setup and cost notes: [
 
 - **Single instance, single AZ:** no redundancy, no load balancer, no database. This is intentional for a lab.
 - **TLS is not publicly trusted:** the current instance uses a self-signed certificate for `web.lab.test`, so clients report a verification error and no CA chain is claimed. A public domain and certificate are a possible next step.
-- **The SSM deploy has no recorded run:** [`deploy-ssm.yml`](.github/workflows/deploy-ssm.yml) is implemented but has no recorded run. It needs the OIDC resources applied, the `production` environment and GitHub variables configured, and the server migrated to the versioned layout ([procedure](docs/04-versioned-deployment.md)).
+- **Do not re-run `bootstrap.sh` after the migration:** it reinstalls the legacy Nginx site, which serves `/var/www/html` instead of the `current` release. Making the bootstrap aware of the versioned layout is a possible next step.
 - **Legacy SSH workflows still exist:** earlier GitHub Actions deploys over SSH are recorded as history in the [evidence index](evidence/README.md). Both are manual-only now, and I plan to remove them once the SSM path has a recorded run.
 - **Console-era evidence:** the SSH, Session Manager, Root CA and TLS screenshots come from the earlier console-built instance that Terraform replaced and are kept as history. SSH and the Root CA chain were not re-verified on the current instance. Its evidence is in [`evidence/artifacts/terraform/`](evidence/artifacts/terraform/). Evidence is a record, not a live check; see the [evidence index](evidence/README.md).
 - **Read the docs for detail:** [architecture](docs/01-architecture.md), [verification](docs/02-deployment-and-verification.md), [server bootstrap](docs/03-server-bootstrap.md), [versioned deployment](docs/04-versioned-deployment.md), [repository guide](docs/05-repository-guide.md).

@@ -7,7 +7,7 @@ This flow adds SHA-addressed releases, atomic activation, validation, and rollba
 - `.github/workflows/deploy.yml` remains the legacy deployment, now manual-only; only shared concurrency coordination is added, while its deployment steps remain unchanged;
 - `.github/workflows/deploy-versioned.yml` is a separate, manual-only workflow;
 - the versioned workflow is dispatched after the server preparation below succeeds;
-- the EC2 migration and the first versioned run are the next stage of the lab.
+- the EC2 migration is done on the current instance, and releases are deployed with `.github/workflows/deploy-ssm.yml` (OIDC and SSM Run Command, no SSH); its runs are recorded in the [evidence index](../evidence/README.md#oidc-and-ssm-deployment-runs).
 
 The manual workflow reuses `EC2_SSH_KEY`, `EC2_KNOWN_HOSTS`, `EC2_HOST`, and `EC2_USER`. It does not introduce a new secret. The stored host-key material remains mandatory, so SSH does not silently trust an unknown host.
 
@@ -66,7 +66,7 @@ The preparation script:
 6. installs the versioned Nginx configuration, runs `nginx -t`, and reloads Nginx;
 7. confirms the initial `VERSION` through local HTTP and HTTPS transport requests.
 
-If the new Nginx configuration or the final HTTP/HTTPS checks fail during the first migration, the script restores and reloads the legacy configuration. It leaves the copied release and installed command available for inspection; it does not delete the original `/var/www/html` files.
+`systemctl reload nginx` returns before the old workers exit, so the final check retries for up to 10 seconds; an immediate single check returned a 404 from a worker still serving `/var/www/html`. If the new Nginx configuration or the final HTTP/HTTPS checks still fail, the script restores and reloads the legacy configuration. It leaves the copied release and installed command available for inspection; it does not delete the original `/var/www/html` files.
 
 Verify the preparation before enabling the workflow:
 

@@ -11,8 +11,10 @@ The configuration does not create credentials, access keys, private keys, an EC2
 - Public Subnet A `10.20.1.0/24`;
 - Internet Gateway, public route table, and default route through the IGW;
 - Security Group for HTTP, HTTPS, and optional restricted SSH;
+- a separately managed network interface with an Elastic IP, so the public address survives an instance replacement;
 - one `t3.micro` EC2 instance by default (`instance_type`: t3 or t3a, nano to medium; t4g is excluded because the AMI parameter is amd64) using Ubuntu Server 24.04 LTS;
-- IAM role and instance profile with `AmazonSSMManagedInstanceCore`.
+- IAM role and instance profile with `AmazonSSMManagedInstanceCore`;
+- the GitHub OIDC deploy role, the private release bucket, and three SSM parameters with the deploy targets.
 
 The AMI ID is not hard-coded. Terraform reads Canonical's public Systems Manager parameter for the current Ubuntu Server 24.04 LTS (`noble`) amd64 EBS gp3 image. Because that alias can advance, the resolved AMI ID is shown in the plan and output.
 
@@ -24,11 +26,11 @@ The AMI ID is not hard-coded. Terraform reads Canonical's public Systems Manager
 | `backend.hcl.example` | Template for the ignored `backend.hcl` that supplies the state bucket name. |
 | `providers.tf` | AWS provider, enforced common tags, and local naming. |
 | `data.tf` | Availability Zones, public Ubuntu AMI parameter, partition, and EC2 trust policy. |
-| `network.tf` | VPC, subnet, Internet Gateway, route table, route, and association. |
+| `network.tf` | VPC, subnet, Internet Gateway, route table, route, association, the web server's network interface, and its Elastic IP. |
 | `security.tf` | Security Group and independently managed ingress/egress rules. |
 | `iam.tf` | SSM IAM role, managed-policy attachment, and instance profile. |
 | `compute.tf` | EC2, IMDSv2, encrypted gp3 root volume, and optional bootstrap user data. |
-| `github-oidc.tf` | GitHub OIDC provider, least-privilege deploy role, and the private release artifact bucket. |
+| `github-oidc.tf` | GitHub OIDC provider, least-privilege deploy role, the private release artifact bucket, and the SSM parameters the deploy workflow reads. |
 | `outputs.tf` | Non-secret resource IDs, endpoints, and SSM session command. |
 | `terraform.tfvars.example` | Non-sensitive starting values. Real `.tfvars` files are ignored. |
 
@@ -49,7 +51,7 @@ The reused bootstrap may generate the laboratory TLS key locally on the EC2 file
 
 No DNS record is created. The bootstrap's `web.lab.test` certificate remains a self-signed laboratory certificate, and clients must supply their own name resolution for hostname-based tests.
 
-The existing GitHub Actions deployment uses SSH. An SSM-only instance is intentionally incompatible with that delivery path until the workflow is redesigned. If that workflow must be used, enable SSH only for explicitly approved administrator or runner CIDRs and maintain those CIDRs; do not open TCP/22 to the world. The workflow's `EC2_HOST`, `EC2_USER`, key, and known-host secrets remain external to Terraform.
+The GitHub Actions deployment uses SSM Run Command and needs no SSH. If SSH is enabled for administration, allow only explicitly approved administrator CIDRs; do not open TCP/22 to the world.
 
 ## State and credentials
 
@@ -91,9 +93,10 @@ Commit `.terraform.lock.hcl` after the first successful `terraform init` so prov
 `github-oidc.tf` lets `.github/workflows/deploy-ssm.yml` deploy without an AWS access key and without opening TCP/22 to GitHub runners:
 
 1. The workflow requests an OIDC token and assumes the `github-actions` role (`sts:AssumeRoleWithWebIdentity`).
-2. It uploads `index.html`, `style.css`, and `VERSION` to `s3://<release bucket>/releases/<sha>/`.
-3. It sends an SSM Run Command (`AWS-RunShellScript`) to the instance, which downloads the release and runs the unchanged `/usr/local/sbin/aws-devops-versioned-deploy activate <sha> <dir>`.
-4. It validates HTTP/HTTPS from the runner and, on failure, requests `rollback` through SSM.
+2. It reads the instance ID, the Elastic IP and the release bucket from the SSM parameters under `/<project_name>/deploy/` (`terraform output deploy_parameter_prefix`).
+3. It uploads `index.html`, `style.css`, and `VERSION` to `s3://<release bucket>/releases/<sha>/`.
+4. It sends an SSM Run Command (`AWS-RunShellScript`) to the instance, which downloads the release and runs the unchanged `/usr/local/sbin/aws-devops-versioned-deploy activate <sha> <dir>`.
+5. It validates HTTP/HTTPS from the runner and, on failure, requests `rollback` through SSM.
 
 ### Trust policy
 
@@ -107,31 +110,31 @@ The first deploy run failed with `Not authorized to perform sts:AssumeRoleWithWe
 
 ### Permissions
 
-- GitHub role: `ssm:SendCommand` only on this instance and the `AWS-RunShellScript` document, `ssm:GetCommandInvocation`/`ListCommandInvocations` (no resource-level scoping exists for them), and `s3:PutObject` on the `releases/` prefix.
+- GitHub role: `ssm:SendCommand` only on this instance and the `AWS-RunShellScript` document, `ssm:GetCommandInvocation`/`ListCommandInvocations` (no resource-level scoping exists for them), `ssm:GetParameters` only on the three deploy parameters, and `s3:PutObject` on the `releases/` prefix.
 - EC2 role: `AmazonSSMManagedInstanceCore` plus read-only access (`s3:GetObject`, prefix-limited `s3:ListBucket`) to `releases/`.
 - The release bucket is private, encrypted (SSE-S3), TLS-only, and expires objects after `release_retention_days` (default 30).
 
-The target instance needs the AWS CLI. `scripts/bootstrap.sh` installs it with `snap install aws-cli --classic`; the deploy fails with a clear message if it is missing. An instance bootstrapped before this change needs `sudo bash scripts/bootstrap.sh` run again (it is idempotent and can be sent through SSM).
+The target instance needs the AWS CLI, the deploy command and the release layout. `scripts/bootstrap.sh` installs all three on first boot; the deploy fails with a clear message if the AWS CLI is missing. Running the bootstrap again is safe (it keeps the active release) and can be sent through SSM.
 
 An account can hold only one provider for `token.actions.githubusercontent.com`. If it already exists, set `create_github_oidc_provider = false`.
 
 ### GitHub configuration
 
-Nothing here is secret. Create these repository (or `production` environment) **variables** from the Terraform outputs:
+Nothing here is secret. Create these repository (or `production` environment) **variables**:
 
 | Variable | Source |
 |---|---|
 | `AWS_ROLE_ARN` | `terraform output github_actions_role_arn` |
 | `AWS_REGION` | `us-east-2` |
-| `RELEASE_BUCKET` | `terraform output release_bucket_name` |
-| `EC2_INSTANCE_ID` | `terraform output instance_id` |
-| `EC2_HOST` | current public address of the instance (`terraform output`) |
+| `DEPLOY_PARAMETER_PREFIX` | optional; only when `project_name` is not the default (`terraform output deploy_parameter_prefix`) |
+
+The instance ID, public address and release bucket are not GitHub variables: Terraform writes them to SSM Parameter Store on every apply, so a replaced instance needs no change in GitHub. The earlier `RELEASE_BUCKET`, `EC2_INSTANCE_ID` and `EC2_HOST` variables are no longer read and can be deleted.
 
 The SSH-based workflows and their secrets (`EC2_SSH_KEY`, `EC2_KNOWN_HOSTS`, `EC2_HOST`, `EC2_USER`) were removed after the SSM path was validated; nothing in this repository reads them any more.
 
 ### Validate before removing the SSH path
 
-Steps 1 to 3 and the rollback test in step 4 were completed on the current instance with SSH already disabled (see the [evidence index](../../evidence/README.md#oidc-and-ssm-deployment-runs)). The rollback test set `EC2_HOST` to `127.0.0.1` for one run, so the release activated on the instance and the external validation failed. A run from outside the `production` environment has not been tested yet. Step 5 was skipped because the instance has no SSH path to compare with.
+Steps 1 to 3 and the rollback test in step 4 were completed on the current instance with SSH already disabled (see the [evidence index](../../evidence/README.md#oidc-and-ssm-deployment-runs)). The rollback test set `EC2_HOST` to `127.0.0.1` for one run, so the release activated on the instance and the external validation failed; the workflow's optional `validation_host` input now does the same without editing variables. A run from outside the `production` environment has not been tested yet. Step 5 was skipped because the instance has no SSH path to compare with.
 
 1. Review `terraform plan` and apply it deliberately; confirm the instance appears as an `Online` SSM managed node.
 2. Create the `production` environment and the variables above.
@@ -139,6 +142,10 @@ Steps 1 to 3 and the rollback test in step 4 were completed on the current insta
 4. Test the failure path: deploy a release that fails external validation (for example, stop Nginx temporarily) and confirm that rollback is requested; also confirm that a run from a non-`production` context cannot assume the role.
 5. Run both workflows once with SSH still enabled to compare results, then repeat the SSM run with `enable_ssh = false` (no port 22 rule).
 6. Only then delete `deploy-versioned.yml`, the SSH secrets, and any SSH ingress CIDRs. (Done: both SSH workflows were removed, and the instance has no SSH ingress rule.)
+
+## Upgrading an environment created before the Elastic IP
+
+The first apply after this change replaces the instance, because its primary network interface moves to a separately managed resource. Expect a plan that creates the network interface, the Elastic IP and the three SSM parameters, updates the subnet (`map_public_ip_on_launch = false`) and the deploy policy, and replaces `aws_instance.web`. The new instance bootstraps itself with the versioned layout and gets a new instance ID and the new, from then on stable, public address; the deploy workflow picks both up from Parameter Store. Releases deployed to the old instance are not copied, so run the deploy workflow once after the apply to serve the latest commit.
 
 ## Create a new environment
 
@@ -168,7 +175,7 @@ This procedure is only for creating a separate environment when the plan shows n
    terraform apply lab.tfplan
    ```
 
-The EC2 first-boot script installs Git, checks out `bootstrap_repository_ref`, and runs the existing `scripts/bootstrap.sh`. Package installation and repository access require outbound Internet connectivity. Pin the repository ref to the intended commit before creation when reproducibility matters.
+The EC2 first-boot script installs Git, checks out `bootstrap_repository_ref`, and runs `scripts/bootstrap.sh`, which leaves the instance ready for the deploy workflow with the checked-out commit as its first release. The Elastic IP is attached to the network interface before the instance starts, so the public address does not change during first boot. Package installation and repository access require outbound Internet connectivity. Pin the repository ref to the intended commit before creation when reproducibility matters.
 
 While bootstrap is enabled, `user_data_replace_on_change` is also enabled. A change to the rendered user data can therefore replace a Terraform-created instance; always inspect the plan before applying changes.
 
@@ -242,7 +249,7 @@ Review current AWS pricing before creation. Potential billable items include:
 
 - `t3.micro` instance runtime;
 - the encrypted gp3 EBS root volume and retained snapshots, if any are created outside this code;
-- the public IPv4 address while assigned;
+- the Elastic IP (public IPv4), billed while it is allocated, including while the instance is stopped;
 - Internet data transfer and package/repository downloads;
 - optional logging, advanced Systems Manager features, or other services enabled outside this configuration.
 

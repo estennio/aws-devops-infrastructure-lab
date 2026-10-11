@@ -31,7 +31,7 @@ i-041c6cfc9e5181d4c / t3.micro / Ubuntu Server 24.04 LTS
         `-- HTTPS :443 / TLS 1.3
 ```
 
-The public IPv4 used for testing is not recorded as permanent configuration because it can change when no Elastic IP is assigned.
+The instance's primary network interface is a separate Terraform resource that holds an Elastic IP, so the public IPv4 stays the same when the instance is replaced. The address itself is not recorded in the repository; `terraform output instance_public_ip` shows it, and the deploy workflow reads it from SSM Parameter Store.
 
 ## Components
 
@@ -47,7 +47,7 @@ The public IPv4 used for testing is not recorded as permanent configuration beca
 | Static website | Implemented in the repository | `index.html` and `style.css` |
 | GitHub Actions delivery over SSH | Historical: successful runs linked in the evidence index; the workflows were removed | Git history and the verification record |
 | GitHub Actions delivery over OIDC and SSM | Verified: deploy, rollback test and redeploy with SSH disabled | [`01-ssm-deploy-and-rollback.txt`](../evidence/artifacts/deployment/01-ssm-deploy-and-rollback.txt), runs in the evidence index |
-| Ubuntu/Nginx bootstrap | Reproducible server configuration | `scripts/bootstrap.sh` and `configs/nginx/web.lab.test.conf` |
+| Ubuntu/Nginx bootstrap | Reproducible server configuration | `scripts/bootstrap.sh` and `configs/nginx/web.lab.test.versioned.conf` |
 | Minimum AWS infrastructure | Terraform configuration for the minimum architecture | `infra/terraform/` |
 
 Curated screenshots of the AWS resources, Session Manager, HTTP/HTTPS, and TLS are committed under `evidence/artifacts/`, and the successful workflow runs are linked in the evidence index. Raw AWS exports and workflow logs are not stored, so the topology is a verified record rather than a live inventory.

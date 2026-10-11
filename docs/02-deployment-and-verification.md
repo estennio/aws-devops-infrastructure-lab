@@ -158,7 +158,7 @@ Earlier releases were deployed over SSH by `Deploy website to EC2` (`deploy.yml`
 |---|---|---|
 | Static HTML/CSS site | Implemented | Served over HTTP and HTTPS |
 | GitHub Actions SSH deployment | Removed after the SSM workflow was verified | Earlier successful runs linked in the evidence index |
-| Versioned deployment and rollback | Server migrated to the release layout | Activation, automatic rollback and redeploy recorded through the SSM workflow |
+| Versioned deployment and rollback | Release layout created by the bootstrap; the earlier server was migrated once | Activation, automatic rollback and redeploy recorded through the SSM workflow |
 | OIDC and SSM deployment | Implemented (`deploy-ssm.yml`, `github-oidc.tf`) | Deploy, deliberate failure with rollback, and redeploy recorded ([`01-ssm-deploy-and-rollback.txt`](../evidence/artifacts/deployment/01-ssm-deploy-and-rollback.txt)) |
 | VPC, subnet, Internet Gateway, route table, Security Group | Terraform configuration | Applied from scratch; outputs in `evidence/artifacts/terraform/`; earlier console screenshots committed |
 | EC2, Ubuntu 24.04 LTS, and SSM IAM profile | Terraform configuration | Applied from scratch; instance `Online` in SSM (`evidence/artifacts/terraform/`) |
@@ -176,5 +176,5 @@ The [evidence index](../evidence/README.md) is the source of truth for the artif
 
 ## Next steps
 
-1. Make `bootstrap.sh` aware of the versioned layout, so re-running it cannot reinstall the legacy Nginx site.
+1. Record a from-scratch apply with the versioned bootstrap and the Elastic IP, followed by a deploy with no manual step.
 2. Optionally add a publicly trusted domain and certificate.

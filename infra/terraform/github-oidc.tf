@@ -8,8 +8,9 @@ locals {
     var.release_bucket_name,
     "${var.project_name}-releases-${data.aws_caller_identity.current.account_id}"
   )
-  release_prefix  = "releases"
-  github_oidc_url = "token.actions.githubusercontent.com"
+  release_prefix          = "releases"
+  deploy_parameter_prefix = "/${var.project_name}/deploy"
+  github_oidc_url         = "token.actions.githubusercontent.com"
   github_oidc_provider_arn = var.create_github_oidc_provider ? aws_iam_openid_connect_provider.github[0].arn : (
     "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:oidc-provider/${local.github_oidc_url}"
   )
@@ -99,6 +100,13 @@ data "aws_iam_policy_document" "github_deploy" {
     effect    = "Allow"
     actions   = ["ssm:GetCommandInvocation", "ssm:ListCommandInvocations"]
     resources = ["*"]
+  }
+
+  statement {
+    sid       = "ReadDeployTargets"
+    effect    = "Allow"
+    actions   = ["ssm:GetParameters"]
+    resources = [for parameter in aws_ssm_parameter.deploy : parameter.arn]
   }
 
   statement {
@@ -235,4 +243,24 @@ resource "aws_s3_bucket_policy" "releases" {
   policy = data.aws_iam_policy_document.releases_bucket.json
 
   depends_on = [aws_s3_bucket_public_access_block.releases]
+}
+
+# The deploy workflow reads its targets from here instead of from GitHub
+# repository variables, so replacing the instance needs no manual update in
+# GitHub. The values are identifiers, not secrets.
+resource "aws_ssm_parameter" "deploy" {
+  for_each = {
+    "instance-id"    = aws_instance.web.id
+    "public-host"    = aws_eip.web.public_ip
+    "release-bucket" = aws_s3_bucket.releases.id
+  }
+
+  name        = "${local.deploy_parameter_prefix}/${each.key}"
+  description = "Deployment target read by the GitHub Actions deploy workflow (${each.key})"
+  type        = "String"
+  value       = each.value
+
+  tags = {
+    Name = "${local.name_prefix}-deploy-${each.key}"
+  }
 }

@@ -18,7 +18,7 @@ flowchart LR
 
     subgraph vpc["VPC 10.20.0.0/16 (us-east-2)"]
         subgraph subnet["Public subnet 10.20.1.0/24"]
-            sg{{Security Group<br/>80, 443 in}} --> ec2["EC2 t3.micro<br/>Ubuntu 24.04 + Nginx"]
+            sg{{Security Group<br/>80, 443 in}} --> ec2["EC2 t3.micro<br/>Ubuntu 24.04 + Nginx<br/>Elastic IP"]
         end
     end
     igw --> sg
@@ -26,6 +26,7 @@ flowchart LR
 
     subgraph deploy["Deploy (manual workflow)"]
         gha[GitHub Actions] -->|OIDC token| iam[IAM role<br/>environment: production]
+        iam -->|GetParameters| params[(SSM Parameter Store<br/>deploy targets)]
         iam -->|PutObject| s3[(S3 releases)]
         iam -->|SendCommand| ssm[SSM Run Command]
     end
@@ -39,12 +40,12 @@ flowchart LR
 
 - **Infrastructure as code:** the VPC, subnet, routing, Security Group, EC2 and IAM are all in [`infra/terraform/`](infra/terraform/). A from-scratch apply created 14 resources; [plan, outputs and live checks](evidence/artifacts/terraform/) are committed.
 - **Remote state:** a separate [bootstrap module](infra/bootstrap/) creates the S3 state bucket (versioned, encrypted, TLS-only); the main stack uses S3 native locking.
-- **Network:** one public subnet behind an Internet Gateway, with HTTP/HTTPS open and SSH off by default ([`network.tf`](infra/terraform/network.tf), [`security.tf`](infra/terraform/security.tf)).
+- **Network:** one public subnet behind an Internet Gateway, with HTTP/HTTPS open and SSH off by default. The instance uses a separately managed network interface that holds an Elastic IP, so its public address survives an instance replacement ([`network.tf`](infra/terraform/network.tf), [`security.tf`](infra/terraform/security.tf)).
 - **Security (configured in Terraform):** IMDSv2 required, encrypted root volume, least-privilege IAM, validated Terraform inputs, no secrets in the repository ([`compute.tf`](infra/terraform/compute.tf), [`github-oidc.tf`](infra/terraform/github-oidc.tf)).
 - **TLS:** Nginx serves HTTPS with TLS 1.3 negotiated on the current instance, using the self-signed certificate (`CN`/`SAN` `web.lab.test`) that [`bootstrap.sh`](scripts/bootstrap.sh) generates ([evidence](evidence/artifacts/terraform/05-server-evidence.txt)). The earlier console-built instance used a laboratory Root CA; that chain is historical only.
-- **First-boot configuration:** `user_data` clones this repository and runs the idempotent [`scripts/bootstrap.sh`](scripts/bootstrap.sh); I recorded HTTP and HTTPS `200 OK`, an `Online` SSM node, `nginx -t`, the 80/443 listeners and a server evidence run over SSM Run Command on the resulting instance ([evidence](evidence/artifacts/terraform/)).
+- **First-boot configuration:** `user_data` clones this repository and runs the idempotent [`scripts/bootstrap.sh`](scripts/bootstrap.sh), which installs Nginx, the certificate, the deploy command and the versioned release layout, with the checked-out commit as the first release. A new instance is ready for the deploy workflow without any manual step. I recorded HTTP and HTTPS `200 OK`, an `Online` SSM node, `nginx -t`, the 80/443 listeners and a server evidence run over SSM Run Command on the resulting instance ([evidence](evidence/artifacts/terraform/)).
 - **CI:** [`validate.yml`](.github/workflows/validate.yml) runs `terraform fmt`, `validate` and TFLint on both Terraform roots, ShellCheck and a Trivy config scan on every PR. Every action is pinned to a commit SHA, and [Dependabot](.github/dependabot.yml) proposes updates for actions and Terraform providers.
-- **Deploy with rollback (verified):** [`deploy-ssm.yml`](.github/workflows/deploy-ssm.yml) uploads a SHA-addressed release to S3, activates it on the instance through SSM, validates HTTP/HTTPS from the runner, and rolls back on failure ([design](docs/04-versioned-deployment.md)). Each run waits for approval on the `production` environment. A deploy, a deliberate failure that rolled back, and a redeploy are recorded with SSH disabled ([runs and transcript](evidence/README.md#oidc-and-ssm-deployment-runs)).
+- **Deploy with rollback (verified):** [`deploy-ssm.yml`](.github/workflows/deploy-ssm.yml) reads the instance ID, public address and release bucket that Terraform publishes to SSM Parameter Store, uploads a SHA-addressed release to S3, activates it on the instance through SSM, validates HTTP/HTTPS from the runner, and rolls back on failure ([design](docs/04-versioned-deployment.md)). Each run waits for approval on the `production` environment. A deploy, a deliberate failure that rolled back, and a redeploy are recorded with SSH disabled ([runs and transcript](evidence/README.md#oidc-and-ssm-deployment-runs)).
 
 ## Key decisions
 
@@ -52,6 +53,8 @@ flowchart LR
 - **OIDC instead of an AWS access key**, because there is nothing long-lived to leak or rotate. The trust policy is pinned to this repository by its immutable GitHub ID and to the `production` environment.
 - **Environment-pinned trust instead of a branch name**, because the environment can require reviewers and restrict deployments to `main`, so a pull request cannot get credentials.
 - **No NAT Gateway, load balancer or database**, because a single public instance meets the goal and those services dominate the cost of a lab ([scope decisions](docs/01-architecture.md)).
+- **Elastic IP on its own network interface instead of the instance's automatic address**, because the interface outlives the instance: a replaced instance boots with the same public IP, and the address is attached before first boot, so package downloads never see it change.
+- **Deploy targets in SSM Parameter Store instead of GitHub variables**, because Terraform writes them on every apply. Replacing the instance needs no manual update in GitHub, and only `AWS_ROLE_ARN` and `AWS_REGION` are configured there.
 - **Atomic symlink switch instead of copying files in place**, because `mv -T` over `current` swaps releases in one step and keeps the previous release for rollback ([versioned deployment](docs/04-versioned-deployment.md)).
 - **Inline, justified Trivy suppressions instead of a global ignore file**, because each accepted finding (for example, SSE-S3 instead of a customer-managed KMS key) is documented next to the resource it applies to ([`infra/bootstrap/main.tf`](infra/bootstrap/main.tf)).
 
@@ -74,7 +77,7 @@ terraform plan -out tfplan
 terraform apply tfplan
 ```
 
-Variables, import of existing resources, the OIDC deploy setup and cost notes: [`infra/terraform/README.md`](infra/terraform/README.md).
+Then create the `production` environment in GitHub with the variables `AWS_ROLE_ARN` (`terraform output github_actions_role_arn`) and `AWS_REGION`, and run **Deploy versioned website via SSM**. Variables, import of existing resources, the OIDC deploy setup and cost notes: [`infra/terraform/README.md`](infra/terraform/README.md).
 
 ## Lessons learned
 
@@ -87,7 +90,6 @@ Variables, import of existing resources, the OIDC deploy setup and cost notes: [
 
 - **Single instance, single AZ:** no redundancy, no load balancer, no database. This is intentional for a lab.
 - **TLS is not publicly trusted:** the current instance uses a self-signed certificate for `web.lab.test`, so clients report a verification error and no CA chain is claimed. A public domain and certificate are a possible next step.
-- **Do not re-run `bootstrap.sh` after the migration:** it reinstalls the legacy Nginx site, which serves `/var/www/html` instead of the `current` release. Making the bootstrap aware of the versioned layout is a possible next step.
 - **SSH deploys are history only:** the earlier GitHub Actions workflows that deployed over SSH were removed once the SSM path had recorded runs. Their successful runs stay linked in the [evidence index](evidence/README.md).
 - **Console-era evidence:** the SSH, Session Manager, Root CA and TLS screenshots come from the earlier console-built instance that Terraform replaced and are kept as history. SSH and the Root CA chain were not re-verified on the current instance. Its evidence is in [`evidence/artifacts/terraform/`](evidence/artifacts/terraform/). Evidence is a record, not a live check; see the [evidence index](evidence/README.md).
 - **Read the docs for detail:** [architecture](docs/01-architecture.md), [verification](docs/02-deployment-and-verification.md), [server bootstrap](docs/03-server-bootstrap.md), [versioned deployment](docs/04-versioned-deployment.md), [repository guide](docs/05-repository-guide.md).

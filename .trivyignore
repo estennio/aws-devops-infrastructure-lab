@@ -1,8 +1,5 @@
 # Accepted risks for this lab environment.
 
-# The web server runs in a public subnet by design and needs a public IP.
-AWS-0164
-
 # VPC Flow Logs are out of scope for this single-instance lab (cost).
 AWS-0178
 

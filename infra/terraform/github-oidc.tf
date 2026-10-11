@@ -8,8 +8,11 @@ locals {
     var.release_bucket_name,
     "${var.project_name}-releases-${data.aws_caller_identity.current.account_id}"
   )
-  release_prefix          = "releases"
-  deploy_parameter_prefix = "/${var.project_name}/deploy"
+  release_prefix = "releases"
+  # Parameter names whose first segment starts with "aws" or "ssm" are reserved
+  # by AWS, and the default project name starts with "aws", so the path begins
+  # with a fixed segment instead.
+  deploy_parameter_prefix = "/deploy/${var.project_name}"
   github_oidc_url         = "token.actions.githubusercontent.com"
   github_oidc_provider_arn = var.create_github_oidc_provider ? aws_iam_openid_connect_provider.github[0].arn : (
     "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:oidc-provider/${local.github_oidc_url}"

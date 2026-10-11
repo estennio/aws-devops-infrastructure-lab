@@ -40,9 +40,11 @@ Rows marked *earlier console-built instance* are screenshots of the infrastructu
 | Local HTTP/HTTPS, service state, `nginx -t` | Collector output with exit statuses | Run [`scripts/collect-evidence.sh`](../scripts/collect-evidence.sh) on the server; results are transcribed in the verification document | Recorded |
 | OIDC and SSM GitHub Actions deploy | Approved manual runs with SSH disabled: a deploy, a deliberate external-validation failure that rolled back through SSM, and a redeploy; served `VERSION` checked from outside after each | [`deployment/01-ssm-deploy-and-rollback.txt`](artifacts/deployment/01-ssm-deploy-and-rollback.txt), runs listed below | Available |
 | Terraform | Plan, outputs, live HTTP/HTTPS and SSM checks | `infra/terraform/` | [`artifacts/terraform/`](artifacts/terraform/) |
-| Current instance: Nginx, listeners, `nginx -t`, HTTP/HTTPS | Collector output with exit statuses, run through SSM Run Command | [`05-server-evidence.txt`](artifacts/terraform/05-server-evidence.txt) | Available |
-| Current instance: TLS 1.3 and certificate | Forced TLS 1.3 handshake; self-signed certificate, `CN`/`SAN` `web.lab.test`, issuer equal to subject (no CA chain) | [`05-server-evidence.txt`](artifacts/terraform/05-server-evidence.txt) | Available |
-| Current instance: SSM Run Command | Command status `Success` for the collection run without SSH | [`05-server-evidence.txt`](artifacts/terraform/05-server-evidence.txt) | Available |
+| First Terraform instance (`i-041c6cfc9e5181d4c`, replaced 2026-10-11): Nginx, listeners, `nginx -t`, HTTP/HTTPS | Collector output with exit statuses, run through SSM Run Command | [`05-server-evidence.txt`](artifacts/terraform/05-server-evidence.txt) | Available |
+| First Terraform instance: TLS 1.3 and certificate | Forced TLS 1.3 handshake; self-signed certificate, `CN`/`SAN` `web.lab.test`, issuer equal to subject (no CA chain) | [`05-server-evidence.txt`](artifacts/terraform/05-server-evidence.txt) | Available |
+| First Terraform instance: SSM Run Command | Command status `Success` for the collection run without SSH | [`05-server-evidence.txt`](artifacts/terraform/05-server-evidence.txt) | Available |
+| Current instance (`i-077149aee34bdbb5c`): reprovisioning and first boot | Plan and apply that replaced the instance and attached the Elastic IP; the new instance served the cloned commit before any deploy, with no manual step | [`deployment/02-elastic-ip-reprovision-and-deploy.txt`](artifacts/deployment/02-elastic-ip-reprovision-and-deploy.txt) | Available |
+| Current instance: deploy with targets from Parameter Store | Approved run #3 resolved instance, address and bucket from SSM Parameter Store with no deploy variables in GitHub; served `VERSION` checked from outside | [`deployment/02-elastic-ip-reprovision-and-deploy.txt`](artifacts/deployment/02-elastic-ip-reprovision-and-deploy.txt), [run 38143451159](https://github.com/estennio/aws-devops-infrastructure-lab/actions/runs/38143451159) | Available |
 
 ## Verified GitHub Actions links
 
@@ -62,7 +64,7 @@ Public API source: [workflow runs](https://api.github.com/repos/estennio/aws-dev
 
 ## OIDC and SSM deployment runs
 
-Workflow `Deploy versioned website via SSM`, environment `production` (required reviewer, `main` only). Details, log excerpts and the external `VERSION` checks are in [`deployment/01-ssm-deploy-and-rollback.txt`](artifacts/deployment/01-ssm-deploy-and-rollback.txt). GitHub keeps workflow logs for a limited time; the transcript is the durable record.
+Workflow `Deploy versioned website via SSM`, environment `production` (required reviewer, `main` only). Details, log excerpts and the external `VERSION` checks are in [`deployment/01-ssm-deploy-and-rollback.txt`](artifacts/deployment/01-ssm-deploy-and-rollback.txt) (runs #1 and #2, previous instance) and [`deployment/02-elastic-ip-reprovision-and-deploy.txt`](artifacts/deployment/02-elastic-ip-reprovision-and-deploy.txt) (run #3, current instance). GitHub keeps workflow logs for a limited time; the transcript is the durable record.
 
 | Run | Commit | Result |
 |---|---|---|
@@ -70,6 +72,7 @@ Workflow `Deploy versioned website via SSM`, environment `production` (required 
 | [#1, attempt 2](https://github.com/estennio/aws-devops-infrastructure-lab/actions/runs/38016600883/attempts/2) | `e66bae9` | Success: release uploaded to S3, activated through SSM, validated over HTTP and HTTPS |
 | [#2, attempt 1](https://github.com/estennio/aws-devops-infrastructure-lab/actions/runs/38018487761/attempts/1) | `e234bb0` | Failed on purpose (`EC2_HOST=127.0.0.1`); rollback through SSM succeeded and the instance served `e66bae9` again |
 | [#2, attempt 2](https://github.com/estennio/aws-devops-infrastructure-lab/actions/runs/38018487761/attempts/2) | `e234bb0` | Success after restoring `EC2_HOST`; the instance serves `e234bb0` |
+| [#3](https://github.com/estennio/aws-devops-infrastructure-lab/actions/runs/38143451159) | `17fcdc6` | Success on the reprovisioned instance `i-077149aee34bdbb5c`, with targets read from SSM Parameter Store ([transcript](artifacts/deployment/02-elastic-ip-reprovision-and-deploy.txt)) |
 
 ## Server collection
 

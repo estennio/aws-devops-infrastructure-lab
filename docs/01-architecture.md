@@ -24,7 +24,7 @@ Public Subnet A 10.20.1.0/24
 Security Group
     |
 EC2 lab-web-server
-i-041c6cfc9e5181d4c / t3.micro / Ubuntu Server 24.04 LTS
+i-077149aee34bdbb5c / t3.micro / Ubuntu Server 24.04 LTS / Elastic IP
     |-- Administration: Session Manager (SSH disabled by default)
     `-- Nginx
         |-- HTTP :80
@@ -58,7 +58,7 @@ Curated screenshots of the AWS resources, Session Manager, HTTP/HTTPS, and TLS a
 - **VPC:** `10.20.0.0/16`
 - **Public subnet:** `10.20.1.0/24`
 - **Default route:** `0.0.0.0/0` to the Internet Gateway
-- **Instance:** `lab-web-server` (`i-041c6cfc9e5181d4c`), `t3.micro`
+- **Instance:** `lab-web-server` (`i-077149aee34bdbb5c`), `t3.micro`; it replaced the first Terraform instance `i-041c6cfc9e5181d4c` on 2026-10-11 to attach the Elastic IP
 - **Operating system:** Ubuntu Server 24.04 LTS
 - **Web server:** Nginx
 

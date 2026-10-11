@@ -1,0 +1,147 @@
+Reprovisioning with the Elastic IP, automatic first boot and SSM deploy
+======================================================================
+
+Transcribed from the operator session on 2026-10-11 (UTC). Times are UTC and
+approximate to the minute. The AWS account ID is
+replaced with <account-id>. Commands were run from the operator's workstation
+(Windows PowerShell) in infra/terraform.
+
+Goal: show that `terraform apply` followed by one workflow run is enough to
+serve a commit, with no manual step on the server and no deploy target kept
+in GitHub. Changes under test: #13 (versioned bootstrap, Elastic IP, deploy
+targets in SSM Parameter Store) and #14 (parameter path fix).
+
+Previous instance: i-041c6cfc9e5181d4c, public IP 3.129.69.56 (not static)
+New instance:      i-077149aee34bdbb5c, Elastic IP 77.113.3.55
+
+
+1. Plan for #13 (main at 966d765)
+---------------------------------
+
+02:41  terraform plan -out tfplan
+
+    # aws_instance.web must be replaced
+    -/+ resource "aws_instance" "web" {
+          ~ primary_network_interface {
+              ~ network_interface_id  = "eni-00e5ef36a92d5ede4" -> (known after apply) # forces replacement
+            }
+        }
+    # aws_network_interface.web will be created
+    # aws_eip.web will be created
+    # aws_ssm_parameter.deploy["instance-id"] will be created
+    # aws_ssm_parameter.deploy["public-host"] will be created
+    # aws_ssm_parameter.deploy["release-bucket"] will be created
+    # aws_iam_role_policy.github_deploy will be updated in-place
+    # aws_subnet.public_a will be updated in-place
+          ~ map_public_ip_on_launch = true -> false
+
+    Plan: 6 to add, 2 to change, 1 to destroy.
+
+The only resource destroyed is the instance. VPC, subnet, Security Group,
+buckets, IAM roles and the OIDC provider were refreshed and left unchanged.
+
+
+2. Apply for #13: partial failure
+---------------------------------
+
+02:43  terraform apply tfplan
+
+    aws_instance.web: Destruction complete after 31s
+    aws_subnet.public_a: Modifications complete after 11s [id=subnet-09371c26c1c6910d3]
+    aws_network_interface.web: Creation complete after 1s [id=eni-079ac2aac7772040a]
+    aws_eip.web: Creation complete after 3s [id=eipalloc-0fe788047e8928318]
+    aws_instance.web: Creation complete after 15s [id=i-077149aee34bdbb5c]
+
+    Error: creating SSM Parameter (/aws-devops-infrastructure-lab/deploy/instance-id):
+    operation error SSM: PutParameter, https response error StatusCode: 400,
+    api error AccessDeniedException: No access to reserved parameter name:
+    aws-devops-infrastructure-lab/deploy/instance-id.
+
+    (the same error for public-host and release-bucket)
+
+    terraform output instance_public_ip
+    "77.113.3.55"
+
+Cause: Parameter Store reserves names whose first segment starts with "aws"
+or "ssm", and the project name starts with "aws". `terraform plan` does not
+check this; only the API call during apply does. The network interface,
+Elastic IP and new instance were already created, so only the three
+parameters and the deploy policy update were missing.
+
+Fixed in #14: the parameters moved to /deploy/<project_name>/.
+
+
+3. Automatic first boot (before any deploy)
+-------------------------------------------
+
+02:48  curl.exe -s http://77.113.3.55/VERSION
+
+    966d765b5c609a7b65a4e24cd2ae5cb1480fe028
+
+That is the main commit the instance cloned on first boot. user_data ran
+scripts/bootstrap.sh, which created the versioned release layout, the deploy
+command and a first release named after the checked-out commit. No command
+was run on the instance by hand.
+
+
+4. Plan and apply for #14 (main at 17fcdc6)
+-------------------------------------------
+
+03:01  terraform plan -out tfplan
+
+    # aws_ssm_parameter.deploy["instance-id"] will be created
+          + name = "/deploy/aws-devops-infrastructure-lab/instance-id"
+    # aws_ssm_parameter.deploy["public-host"] will be created
+          + name = "/deploy/aws-devops-infrastructure-lab/public-host"
+    # aws_ssm_parameter.deploy["release-bucket"] will be created
+          + name = "/deploy/aws-devops-infrastructure-lab/release-bucket"
+    # aws_iam_role_policy.github_deploy will be updated in-place
+          (SendCommand now on arn:aws:ec2:us-east-2:<account-id>:instance/i-077149aee34bdbb5c,
+           plus ssm:GetParameters on the three parameters)
+
+    Plan: 3 to add, 1 to change, 0 to destroy.
+
+    Changes to Outputs:
+      ~ deploy_parameter_prefix = "/aws-devops-infrastructure-lab/deploy" -> "/deploy/aws-devops-infrastructure-lab"
+
+    terraform apply tfplan
+
+The apply output was not captured. The deploy run in step 5 read all three
+parameters and sent its SSM command to i-077149aee34bdbb5c, which it could
+only do after this apply succeeded.
+
+The GitHub variables RELEASE_BUCKET, EC2_INSTANCE_ID and EC2_HOST were
+deleted before the deploy. Only AWS_ROLE_ARN and AWS_REGION remain.
+
+
+5. Deploy through the workflow
+------------------------------
+
+13:31  Deploy versioned website via SSM, run #3, commit 17fcdc6, branch main
+       https://github.com/estennio/aws-devops-infrastructure-lab/actions/runs/38143451159
+
+    Triggered manually by estennio; production deployment approved by estennio
+    validation_host input: empty
+    Status: Success, total duration 50s
+
+13:32  curl.exe -s http://77.113.3.55/VERSION
+
+    17fcdc6c57c2bbd0be4d43bfa396379470e16d5c
+
+The served release moved from the first-boot commit (966d765) to the
+deployed commit (17fcdc6) on the same Elastic IP.
+
+
+Result
+------
+
+- `terraform apply` replaced the instance and the new one served the
+  repository commit without any manual step on the server.
+- The public address is now an Elastic IP held by a separately managed
+  network interface, so later instance replacements keep 77.113.3.55.
+- The deploy workflow found the instance, address and bucket in SSM
+  Parameter Store; no deploy target is configured in GitHub.
+
+Not covered here: the server evidence collector (nginx -t, listeners, TLS
+handshake) has not been rerun on i-077149aee34bdbb5c yet; the records in
+evidence/artifacts/terraform/ belong to the previous instance.

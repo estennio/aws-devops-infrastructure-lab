@@ -11,7 +11,7 @@ Supporting screenshots are committed under `evidence/artifacts/` and workflow ru
 - AWS Region: `us-east-2`
 - VPC: `10.20.0.0/16`
 - Public Subnet A: `10.20.1.0/24`
-- EC2 instance: `lab-web-server` (`i-041c6cfc9e5181d4c`), `t3.micro`, managed by Terraform (replaced the earlier console-created instance)
+- EC2 instance: `lab-web-server` (`i-077149aee34bdbb5c`), `t3.micro`, managed by Terraform, with Elastic IP `77.113.3.55`. It replaced the first Terraform instance `i-041c6cfc9e5181d4c` on 2026-10-11, which had replaced the earlier console-created instance
 - OS: Ubuntu Server 24.04 LTS
 - Web server: Nginx
 - Administration: AWS Systems Manager Session Manager (SSH was recorded on the earlier console-built instance and is disabled by default in Terraform)
@@ -19,7 +19,9 @@ Supporting screenshots are committed under `evidence/artifacts/` and workflow ru
 ## Recorded host and administration checks
 
 The checks in this section and the screenshots under `evidence/artifacts/` (`aws`, `ssm`, `tls`, `web`) were recorded on the earlier console-created instance, which Terraform has since replaced. The Terraform-managed instance has its own evidence in [`evidence/artifacts/terraform/`](../evidence/artifacts/terraform/): the plan, outputs, an HTTP/HTTPS check, and the SSM `Online` status. 
-## Current instance verification
+## First Terraform instance verification
+
+These checks belong to `i-041c6cfc9e5181d4c`, the first Terraform-managed instance. It was replaced on 2026-10-11 to attach the Elastic IP; the replacement's first boot and deploy are recorded in [`02-elastic-ip-reprovision-and-deploy.txt`](../evidence/artifacts/deployment/02-elastic-ip-reprovision-and-deploy.txt), and the collector has not been rerun on it yet.
 
 On 2026-10-09 the server evidence collector and extra checks were run on `i-041c6cfc9e5181d4c` through SSM Run Command (no SSH). The command finished with status `Success` and the collector reported `checks_failed=0`. The full output is in [`05-server-evidence.txt`](../evidence/artifacts/terraform/05-server-evidence.txt). It records:
 
@@ -162,10 +164,10 @@ Earlier releases were deployed over SSH by `Deploy website to EC2` (`deploy.yml`
 | OIDC and SSM deployment | Implemented (`deploy-ssm.yml`, `github-oidc.tf`) | Deploy, deliberate failure with rollback, and redeploy recorded ([`01-ssm-deploy-and-rollback.txt`](../evidence/artifacts/deployment/01-ssm-deploy-and-rollback.txt)) |
 | VPC, subnet, Internet Gateway, route table, Security Group | Terraform configuration | Applied from scratch; outputs in `evidence/artifacts/terraform/`; earlier console screenshots committed |
 | EC2, Ubuntu 24.04 LTS, and SSM IAM profile | Terraform configuration | Applied from scratch; instance `Online` in SSM (`evidence/artifacts/terraform/`) |
-| Session Manager and SSM Run Command | Terraform-managed instance profile | `Online` and a successful Run Command collection recorded for the current instance; session screenshots are from the earlier instance |
+| Session Manager and SSM Run Command | Terraform-managed instance profile | `Online` and a successful Run Command collection recorded for the first Terraform instance; Run Command deploys recorded on the current one; session screenshots are from the earlier instance |
 | SSH | Disabled by default in Terraform | Successful access recorded on the earlier instance only |
-| Nginx, HTTP, HTTPS | Reproducible bootstrap and configuration | `nginx -t`, listeners 80/443, and `200 OK` over HTTP and HTTPS recorded on the current instance ([`05-server-evidence.txt`](../evidence/artifacts/terraform/05-server-evidence.txt)) |
-| TLS 1.3 with a self-signed certificate | Bootstrap and Nginx configuration | TLS 1.3 and `CN`/`SAN` `web.lab.test` recorded on the current instance ([`05-server-evidence.txt`](../evidence/artifacts/terraform/05-server-evidence.txt)) |
+| Nginx, HTTP, HTTPS | Reproducible bootstrap and configuration | `nginx -t`, listeners 80/443, and `200 OK` over HTTP and HTTPS recorded on the first Terraform instance ([`05-server-evidence.txt`](../evidence/artifacts/terraform/05-server-evidence.txt)) |
+| TLS 1.3 with a self-signed certificate | Bootstrap and Nginx configuration | TLS 1.3 and `CN`/`SAN` `web.lab.test` recorded on the first Terraform instance ([`05-server-evidence.txt`](../evidence/artifacts/terraform/05-server-evidence.txt)) |
 | Laboratory Root CA chain | Manual step on the earlier instance | Historical; not claimed for the current instance |
 | Terraform / infrastructure-as-code | Minimum configuration in `infra/terraform/` | Applied from scratch (14 resources); plan, outputs, and live checks in `evidence/artifacts/terraform/` |
 | RDS, NAT Gateway, Load Balancer, Auto Scaling, ECS/EKS, Docker | Outside the laboratory scope | Not applicable |
@@ -176,5 +178,7 @@ The [evidence index](../evidence/README.md) is the source of truth for the artif
 
 ## Next steps
 
-1. Record a from-scratch apply with the versioned bootstrap and the Elastic IP, followed by a deploy with no manual step.
+1. Rerun `scripts/collect-evidence.sh` through SSM Run Command on `i-077149aee34bdbb5c` to refresh the server evidence (`nginx -t`, listeners, TLS) for the current instance.
 2. Optionally add a publicly trusted domain and certificate.
+
+Done: a reprovisioning apply with the versioned bootstrap and the Elastic IP, followed by a deploy with no manual step, is recorded in [`02-elastic-ip-reprovision-and-deploy.txt`](../evidence/artifacts/deployment/02-elastic-ip-reprovision-and-deploy.txt).

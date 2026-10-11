@@ -8,7 +8,7 @@ locals {
     var.release_bucket_name,
     "${var.project_name}-releases-${data.aws_caller_identity.current.account_id}"
   )
-  release_prefix          = "releases"
+  release_prefix = "releases"
   # Parameter names whose first segment starts with "aws" or "ssm" are reserved
   # by AWS, and the default project name starts with "aws", so the path begins
   # with a fixed segment instead.

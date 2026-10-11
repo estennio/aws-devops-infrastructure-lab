@@ -93,7 +93,7 @@ Commit `.terraform.lock.hcl` after the first successful `terraform init` so prov
 `github-oidc.tf` lets `.github/workflows/deploy-ssm.yml` deploy without an AWS access key and without opening TCP/22 to GitHub runners:
 
 1. The workflow requests an OIDC token and assumes the `github-actions` role (`sts:AssumeRoleWithWebIdentity`).
-2. It reads the instance ID, the Elastic IP and the release bucket from the SSM parameters under `/<project_name>/deploy/` (`terraform output deploy_parameter_prefix`).
+2. It reads the instance ID, the Elastic IP and the release bucket from the SSM parameters under `/deploy/<project_name>/` (`terraform output deploy_parameter_prefix`). The path does not start with the project name because AWS reserves parameter names that begin with `aws` or `ssm`.
 3. It uploads `index.html`, `style.css`, and `VERSION` to `s3://<release bucket>/releases/<sha>/`.
 4. It sends an SSM Run Command (`AWS-RunShellScript`) to the instance, which downloads the release and runs the unchanged `/usr/local/sbin/aws-devops-versioned-deploy activate <sha> <dir>`.
 5. It validates HTTP/HTTPS from the runner and, on failure, requests `rollback` through SSM.

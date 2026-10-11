@@ -31,7 +31,7 @@ jobs:
       AWS_REGION: ${{ vars.AWS_REGION }}
       # Written by Terraform (output deploy_parameter_prefix). The instance ID,
       # public host and release bucket are read from here at run time.
-      DEPLOY_PARAMETER_PREFIX: ${{ vars.DEPLOY_PARAMETER_PREFIX || '/aws-devops-infrastructure-lab/deploy' }}
+      DEPLOY_PARAMETER_PREFIX: ${{ vars.DEPLOY_PARAMETER_PREFIX || '/deploy/aws-devops-infrastructure-lab' }}
       VALIDATION_HOST_OVERRIDE: ${{ inputs.validation_host }}
       DEPLOY_SHA: ${{ github.sha }}
 
